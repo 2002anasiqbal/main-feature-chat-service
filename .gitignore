@@ -108,3 +108,12 @@ selgo-backend/motorcycle-service/env_mc/
 logs/
 uploads/*
 !uploads/.gitkeep
+
+# Uploads - exclude all files but keep directory structure
+selgo-backend/*/uploads/*
+!selgo-backend/*/uploads/.gitkeep
+**/uploads/*.jpeg
+**/uploads/*.jpg
+**/uploads/*.png
+**/uploads/*.gif
+**/uploads/*.pdf
