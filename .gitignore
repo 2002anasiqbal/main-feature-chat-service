@@ -97,3 +97,14 @@ yarn-error.log*
 # OS
 Thumbs.db
 ehthumbs.dbselgo-backend/job-service/ 
+ehthumbs.db
+
+# Additional virtual environments (if any)
+selgo-backend/job-service/venv_job/
+selgo-backend/motorcycle-service/env_mc/
+
+# Additional safety patterns
+*.log
+logs/
+uploads/*
+!uploads/.gitkeep

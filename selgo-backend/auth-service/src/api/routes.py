@@ -11,12 +11,19 @@ from ..models.user_schemas import (
 )
 from ..utils.auth_utils import get_user_from_token
 from ..config.config import settings
+from ..models.user_models import User
 
+# Main auth router (existing)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
+
+# NEW: Separate router for user endpoints (no auth prefix)
+user_router = APIRouter(prefix="/api/v1", tags=["users"])
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
 
 auth_service = AuthService()
 
+# Existing auth routes
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
@@ -105,3 +112,30 @@ def validate_token(token: str = Depends(oauth2_scheme)):
     """Validate token and return user information. Used by other microservices."""
     user_data = get_user_from_token(token)
     return TokenValidationResponse(**user_data)
+
+# MOVED: User endpoint to separate router with correct prefix
+@user_router.get("/users/{user_id}")
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    """Get user by ID - for other microservices"""
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+        
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "phone": user.phone,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "role": user.role.value if hasattr(user, 'role') else "buyer"
+        }
+    except Exception as e:
+        print(f"Error fetching user {user_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )

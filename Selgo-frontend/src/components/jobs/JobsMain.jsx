@@ -1,3 +1,4 @@
+// selgo-frontend/components/jobs/JobsMain.jsx
 "use client";
 
 import SearchBar from "../root/SearchBar";
@@ -6,6 +7,8 @@ import Image from "next/image";
 import ArticleCard from "./ArticleCard";
 import PopularSearches from "./PopularSearches";
 import RecommendationJobCard from "./RecommendationJobCard";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const jobRecommendations = [
     {
@@ -38,25 +41,27 @@ const jobRecommendations = [
     },
 ];
 
-// Separate card data
 const cardData = [
     {
         icon: "/assets/jobs/1.svg",
         label: "Your Job Profile",
         title: "Find your dream job",
-        subtitle: "There are 43,486 positions on FINN.no right now."
+        subtitle: "There are 43,486 positions on FINN.no right now.",
+        route: "/routes/jobs/job-profile"
     },
     {
         icon: "/assets/jobs/2.svg",
         label: "Wages",
         title: "Compare your salary",
-        subtitle: "Compare your salary with other peoples."
+        subtitle: "Compare your salary with other peoples.",
+        route: "/routes/jobs/salary"
     },
     {
         icon: "/assets/jobs/3.svg",
         label: "Resume",
         title: "Create a brand new CV",
-        subtitle: "Create a brand new and updated CV quickly and easily"
+        subtitle: "Create a brand new and updated CV quickly and easily",
+        route: "/routes/jobs/cv-builder"
     }
 ];
 
@@ -97,18 +102,32 @@ const searches = [
 ];
 
 export default function JobMain() {
+    const router = useRouter();
+    const [searchValue, setSearchValue] = useState("");
+
+    const handleCardClick = (index) => {
+        const card = cardData[index];
+        if (card.route) {
+            router.push(card.route);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white">
             <div className="my-10 w-full">
-                <SearchBar />
+                <SearchBar 
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                />
             </div>
+            
             {/* Top Banner */}
             <div className="bg-teal-700 text-white py-6 sm:py-8 text-center px-4">
                 <h1 className="text-xl sm:text-2xl font-semibold mb-2">Is Monday coming a little too soon?</h1>
                 <p>Do something about it, at FINN we have 43,486 vacancies</p>
             </div>
 
-            {/* Main Card Section */}
+            {/* Main Card Section - NOW WITH CLICK HANDLERS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 py-6 sm:py-8">
                 {cardData.map((card, index) => (
                     <LeftAlignedCard
@@ -117,11 +136,12 @@ export default function JobMain() {
                         label={card.label}
                         title={card.title}
                         subtitle={card.subtitle}
+                        onClick={() => handleCardClick(index)}
                     />
                 ))}
             </div>
 
-            {/* Last Viewed Section */}
+            {/* Rest of the component remains the same... */}
             <div className="mb-8 sm:mb-10">
                 <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                     <Image src="/assets/jobs/4.svg" alt="clock" width={18} height={18} />
@@ -136,7 +156,6 @@ export default function JobMain() {
             </div>
 
             <div className="mb-8 sm:mb-10">
-                {/* Heading */}
                 <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                     <Image src="/assets/jobs/6.svg" alt="heart" width={18} height={18} />
                     Recommendations for you
@@ -145,9 +164,7 @@ export default function JobMain() {
                     Based on your preferences, these may suit you
                 </p>
 
-                {/* Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Left Recommendation Intro Card */}
                     <div className="border rounded-md p-4 sm:p-6 flex flex-col justify-between items-center text-center bg-white shadow-sm h-full">
                         <div className="flex flex-col items-center justify-center flex-1">
                             <Image src="/assets/jobs/7.svg" alt="rec" width={60} height={60} className="sm:w-[70px] sm:h-[70px]" />
@@ -156,12 +173,14 @@ export default function JobMain() {
                                 In order to show you personalized recommendations, we need to know a little more about you and your skills
                             </p>
                         </div>
-                        <button className="bg-teal-600 text-white px-4 py-2 rounded-md w-full text-sm mt-4 sm:mt-6">
+                        <button 
+                            className="bg-teal-600 text-white px-4 py-2 rounded-md w-full text-sm mt-4 sm:mt-6"
+                            onClick={() => router.push('/routes/jobs/job-profile')}
+                        >
                             Start
                         </button>
                     </div>
 
-                    {/* Job Cards in 2x2 format */}
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {jobRecommendations.map((job, idx) => (
                             <RecommendationJobCard key={idx} {...job} />
@@ -170,7 +189,7 @@ export default function JobMain() {
                 </div>
             </div>
 
-            {/* Salary Banner */}
+            {/* Salary Banner - MAKE IT CLICKABLE */}
             <div className="bg-teal-700 text-white p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center rounded-md">
                 <div className="flex flex-col sm:flex-row px-3 sm:px-5 py-4 sm:py-0 sm:h-24 rounded-sm justify-center w-full mx-auto bg-white items-center gap-3 mb-4 sm:mb-0">
                     <Image src="/assets/jobs/2.svg" alt="compare" width={50} height={50} className="sm:w-[60px] sm:h-[60px]" />
@@ -178,12 +197,16 @@ export default function JobMain() {
                         <p className="font-medium text-gray-900">Compare your salary</p>
                         <p className="text-xs sm:text-sm text-gray-600">Are you getting what you deserve in your current position?</p>
                     </div>
-                    <button className="text-white bg-teal-700 px-4 py-2 rounded-md font-semibold text-sm mt-3 sm:mt-0">Compare salaries</button>
+                    <button 
+                        className="text-white bg-teal-700 px-4 py-2 rounded-md font-semibold text-sm mt-3 sm:mt-0"
+                        onClick={() => router.push('/routes/jobs/salary')}
+                    >
+                        Compare salaries
+                    </button>
                 </div>
             </div>
 
             <div className="w-full py-10">
-                {/* Useful Articles Section */}
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Useful articles</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full max-w-5xl mx-auto mb-8 sm:mb-10">
                     {articles.map((article, index) => (
@@ -196,7 +219,6 @@ export default function JobMain() {
                     ))}
                 </div>
 
-                {/* Popular Searches Section */}
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Popular searches</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-16 lg:gap-28">
                     {searches.map((search, index) => (

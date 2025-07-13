@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import CVBuilderService from './CVBuilderService';
 
 const CVBuilder = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -13,6 +14,8 @@ const CVBuilder = () => {
     languages: [],
     summary: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedCvId, setGeneratedCvId] = useState(null);
 
   // Handle contact info changes
   const handleContactInfoChange = (field, value) => {
@@ -152,11 +155,86 @@ const CVBuilder = () => {
     }
   };
 
-  // Create CV
-  const createCV = () => {
-    console.log('CV Data:', formData);
-    alert('CV created successfully!');
-    // In a real app, this would generate a PDF or similar
+  // Create CV - UPDATED WITH API INTEGRATION
+  const createCV = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Format data for API
+      const cvBuilderData = {
+        contact_info: {
+          email: formData.contactInfo.email || 'example@email.com',
+          phone: formData.contactInfo.phone || '',
+          location: null,
+          website: null,
+          linkedin_url: null
+        },
+        work_experience: {
+          experiences: formData.workExperience.map(exp => ({
+            job_title: exp.position || '',
+            company_name: exp.company || '',
+            company_website: null,
+            location: null,
+            start_date: exp.startDate || new Date().toISOString().split('T')[0],
+            end_date: exp.endDate || null,
+            is_current: !exp.endDate,
+            description: exp.description || '',
+            achievements: null,
+            display_order: 0
+          }))
+        },
+        education: {
+          educations: formData.education.map(edu => ({
+            degree: edu.degree || '',
+            field_of_study: edu.field || '',
+            institution: edu.institution || '',
+            location: null,
+            start_date: edu.startDate || new Date().toISOString().split('T')[0],
+            end_date: edu.endDate || null,
+            is_current: !edu.endDate,
+            gpa: null,
+            description: null,
+            display_order: 0
+          }))
+        },
+        languages: {
+          languages: formData.languages.map((lang, index) => ({
+            language_id: index + 1, // Simple ID assignment
+            proficiency_level: lang.proficiency ? lang.proficiency.toLowerCase() : 'beginner'
+          }))
+        },
+        summary: {
+          professional_summary: formData.summary || ''
+        }
+      };
+      
+      console.log('Sending CV data:', cvBuilderData);
+      
+      // Call API to create CV
+      const result = await CVBuilderService.buildCV(cvBuilderData);
+      setGeneratedCvId(result.id);
+      
+      alert('CV created successfully!');
+      
+      // Download the CV if ID is available
+      if (result.id) {
+        await CVBuilderService.downloadCV(result.id);
+      }
+    } catch (error) {
+      console.error('Error creating CV:', error);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to create CV. Please try again.';
+      if (error.response?.data?.detail) {
+        errorMessage = `Error: ${error.response.data.detail}`;
+      } else if (error.response?.status === 422) {
+        errorMessage = 'Please check that all required fields are filled correctly.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Render the appropriate step
@@ -474,16 +552,6 @@ const CVBuilder = () => {
               ></textarea>
             </div>
             
-            <button 
-              onClick={addLanguage}
-              className="flex items-center justify-center bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 mb-6"
-            >
-              <span className="mr-2">Add summary</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-            
             <div className="flex justify-between mt-4">
               <button 
                 onClick={prevStep}
@@ -493,9 +561,10 @@ const CVBuilder = () => {
               </button>
               <button 
                 onClick={createCV}
-                className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600"
+                disabled={isSubmitting}
+                className={`bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Create CV
+                {isSubmitting ? 'Creating...' : 'Create CV'}
               </button>
             </div>
           </div>

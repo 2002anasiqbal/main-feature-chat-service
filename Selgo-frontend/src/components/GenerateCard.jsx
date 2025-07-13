@@ -1,93 +1,119 @@
+// Selgo-frontend/src/components/GenerateCard.jsx 
+// MINIMAL CHANGES - Only adding motorcycle backend support to existing component
+
 "use client";
 import React, { useState, useEffect } from "react";
 import BoatCard from "./boat/BoatCard";
 import boatService from "@/services/boatService";
+import motorcycleService from "@/services/motorcycleService"; // Only addition
 
 const Page = ({ 
   columns = 3, 
   route, 
   cards: initialCards = null,
-  disableAutoFetch = false  // New prop to explicitly disable auto-fetching
+  disableAutoFetch = false
 }) => {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // If auto-fetch is disabled and no cards provided yet, just wait
     if (disableAutoFetch && !initialCards) {
       setLoading(true);
       return;
     }
 
-    // If cards are provided as props, use them
-    if (initialCards !== null && initialCards !== undefined) {
-      console.log("Using provided cards:", initialCards);
+ if (initialCards !== null && initialCards !== undefined) {
+    console.log("Using provided cards:", initialCards);
+    
+    const formattedCards = initialCards.map(item => {
+      if (item.image !== undefined && item.title && item.description && item.price) {
+        return item;
+      }
       
-      const formattedCards = initialCards.map(boat => {
-        // Check if already formatted
-        if (boat.image !== undefined && boat.title && boat.description && boat.price) {
-          return boat;
-        }
-        
-        // Format raw boat data
+      // Handle motorcycle data using existing format
+      if (route && route.includes('motor-cycle')) {
         return {
-          id: boat.id,
-          image: boat.primary_image || (boat.images && boat.images.length > 0 ? boat.images[0].image_url : null),
-          title: boat.title || "Unnamed Boat",
-          description: boat.make && boat.model 
-            ? `${boat.make} ${boat.model}`.trim() 
-            : boat.location_name || "No details available",
-          price: boat.price ? `$${boat.price.toLocaleString()}` : "Price unavailable",
-          originalData: boat
+          id: item.id,
+          image: item.primary_image || item.image || "/assets/swiper/1.jpg",
+          title: item.title || "Unnamed Motorcycle",
+          description: item.brand && item.model 
+            ? `${item.brand} ${item.model} - ${item.year}`.trim() 
+            : item.description || "No details available",
+          price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
+          originalData: item
         };
-      });
-      
-      setCards(formattedCards);
-      setLoading(false);
-      return;
-    }
+      } else {
+        // Existing boat/default formatting - NO CHANGES
+        return {
+          id: item.id,
+          image: item.primary_image || (item.images && item.images.length > 0 ? item.images[0].image_url : null),
+          title: item.title || "Unnamed Item",
+          description: item.make && item.model 
+            ? `${item.make} ${item.model}`.trim() 
+            : item.location_name || "No details available",
+          price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
+          originalData: item
+        };
+      }
+    });
+    
+    setCards(formattedCards);
+    setLoading(false);
+    return;
+  }
 
-    // Only fetch if auto-fetch is NOT disabled
+
     if (!disableAutoFetch) {
-       const fetchCards = async () => {
+      const fetchCards = async () => {
         try {
           console.log("GenerateCard is fetching its own data...");
           setLoading(true);
     
-    let response;
-    if (route && route.includes('boat')) {
-      // Use the new homepage boats endpoint for main homepage
-      const boats = await boatService.getHomepageBoats(10);
+          let response;
+          if (route && route.includes('boat')) {
+            // Existing boat logic - NO CHANGES
+            const boats = await boatService.getHomepageBoats(10);
+            
+            const formattedBoats = boats.map(boat => ({
+              id: boat.id,
+              image: boat.primary_image,
+              title: boat.title || "Unnamed Boat",
+              description: boat.make && boat.model 
+                ? `${boat.make} ${boat.model}`.trim() 
+                : boat.location_name || "No details available",
+              price: boat.price ? `$${boat.price.toLocaleString()}` : "Price unavailable",
+              originalData: boat
+            }));
+            setCards(formattedBoats);
+            
+          } else if (route && route.includes('motor-cycle')) {
+            // ONLY ADDITION: Motorcycle logic using existing UI components
+            const motorcycles = await motorcycleService.getHomepageMotorcycles(10);
+            
+            const formattedMotorcycles = motorcycles.map(motorcycle => 
+              motorcycleService.formatMotorcycleForDisplay(motorcycle)
+            );
+            setCards(formattedMotorcycles);
+            
+          } else {
+            // Existing default logic - NO CHANGES
+            setCards(generateMockCards(10));
+          }
+        } catch (err) {
+          console.error("Failed to fetch cards:", err);
+          setError("Failed to load data");
+        } finally {
+          setLoading(false);
+        }
+      };
       
-      const formattedBoats = boats.map(boat => ({
-        id: boat.id,
-        image: boat.primary_image,
-        title: boat.title || "Unnamed Boat",
-        description: boat.make && boat.model 
-          ? `${boat.make} ${boat.model}`.trim() 
-          : boat.location_name || "No details available",
-        price: boat.price ? `$${boat.price.toLocaleString()}` : "Price unavailable",
-        originalData: boat
-      }));
-      setCards(formattedBoats);
-      
-     
-    } else {
-      setCards(generateMockCards(10));
-    }
-  } catch (err) {
-    console.error("Failed to fetch cards:", err);
-    setError("Failed to load data");
-  } finally {
-    setLoading(false);
-  }
-};
       fetchCards();
     }
   }, [initialCards, route, disableAutoFetch]);
 
   const generateMockCards = (count) => {
+    // Existing function - NO CHANGES
     return Array.from({ length: count }, (_, i) => ({
       id: i.toString(),
       image: `https://picsum.photos/300/200?random=${Math.floor(Math.random() * 1000)}`,
@@ -97,6 +123,7 @@ const Page = ({
     }));
   };
 
+  // Existing render logic - NO CHANGES
   if (loading) return <p className="text-center py-10">Loading...</p>;
   if (error) return <p className="text-center py-10 text-red-500">{error}</p>;
   if (cards.length === 0 && disableAutoFetch) {

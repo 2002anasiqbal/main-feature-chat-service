@@ -40,7 +40,14 @@ const categories = [
   { 
     title: "Motorcycle", 
     description: "Buy or sell motorcycles, parts, and accessories.",
-    subcategories: ["Motorcycles", "Parts", "Accessories"]
+    subcategories: [
+      { name: "Thresher 6000", route: "/routes/motor-cycle/create-ad?category=Thresher 6000" },
+      { name: "Suzuki 6000", route: "/routes/motor-cycle/create-ad?category=Suzuki 6000" },
+      { name: "Motorcycles 6000", route: "/routes/motor-cycle/create-ad?category=Motorcycles 6000" },
+      { name: "Auto bikes 6000", route: "/routes/motor-cycle/create-ad?category=Auto bikes 6000" },
+      { name: "Tractor 6000", route: "/routes/motor-cycle/create-ad?category=Tractor 6000" },
+      { name: "Bikes 6000", route: "/routes/motor-cycle/create-ad?category=Bikes 6000" }
+    ]
   },
   { 
     title: "My Tender", 
@@ -61,26 +68,31 @@ const categories = [
 
 export default function CreateAd() {
   const [openIndex, setOpenIndex] = useState(null);
-  const [openSubcategory, setOpenSubcategory] = useState(null);
   const router = useRouter();
 
   const handleToggle = (index) => {
     setOpenIndex(openIndex === index ? null : index);
-    setOpenSubcategory(null); // Reset subcategory when toggling categories
   };
 
   const handleSubcategoryClick = (categoryIndex, subcategoryIndex) => {
     const category = categories[categoryIndex].title;
     const subcategory = categories[categoryIndex].subcategories[subcategoryIndex];
     
-    // For now, we're only handling Boat category
+    // Handle motorcycle subcategories with custom routes
+    if (category === "Motorcycle" && typeof subcategory === 'object' && subcategory.route) {
+      router.push(subcategory.route);
+      return;
+    }
+    
+    // Handle boat category
     if (category === "Boat") {
-      // Create a slugified version of the subcategory for routing
       const subcategorySlug = subcategory.toLowerCase().replace(/ /g, "-");
       router.push(`/routes/create-ad/boat/${subcategorySlug}`);
-    } else {
-      alert(`Creating ads for ${category} - ${subcategory} will be implemented soon!`);
+      return;
     }
+    
+    // For other categories, show alert for now
+    alert(`Creating ads for ${category} - ${subcategory} will be implemented soon!`);
   };
 
   return (
@@ -110,7 +122,7 @@ export default function CreateAd() {
                         onClick={() => handleSubcategoryClick(index, subIndex)}
                         className="w-full text-left p-2 text-blue-600 hover:bg-gray-100 rounded-md transition-colors duration-200"
                       >
-                        {subcategory}
+                        {typeof subcategory === 'object' ? subcategory.name : subcategory}
                       </button>
                     ))}
                   </div>

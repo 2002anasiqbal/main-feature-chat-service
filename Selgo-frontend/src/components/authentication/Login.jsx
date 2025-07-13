@@ -29,7 +29,7 @@ const Login = () => {
   }, [searchParams]);
 
   // Handle Real Login
-  const handleLogin = async (e) => {
+ const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -46,7 +46,27 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(response.user));
 
       setUser(response.user); // Update Zustand Store
-      router.push(redirectUrl); // Redirect to the original URL or dashboard
+      
+      // Get redirect URL from current page URL
+      const currentUrl = new URL(window.location.href);
+      const redirectParam = currentUrl.searchParams.get('redirect');
+      
+      console.log("🔍 Login redirect debug:");
+      console.log("  Current full URL:", window.location.href);
+      console.log("  Redirect parameter:", redirectParam);
+      
+      if (redirectParam) {
+        const decodedRedirect = decodeURIComponent(redirectParam);
+        console.log("✅ Redirecting to:", decodedRedirect);
+        
+        // NUCLEAR OPTION: Replace entire browser history
+        window.history.replaceState(null, null, decodedRedirect);
+        window.location.replace(decodedRedirect);
+      } else {
+        console.log("🏠 No redirect parameter, going to home");
+        window.history.replaceState(null, null, '/');
+        window.location.replace('/');
+      }
     } catch (err) {
       console.error("Login error:", err);
       setError(err.detail || "Login failed. Please check your credentials.");

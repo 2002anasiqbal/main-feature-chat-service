@@ -17,11 +17,11 @@ export default function SearchBar({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        required
       />
       <button 
         type="submit" 
-        className="bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-md text-sm px-4 py-1">
+        className="bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-md text-sm px-4 py-1"
+      >
         Search
       </button>
     </div>

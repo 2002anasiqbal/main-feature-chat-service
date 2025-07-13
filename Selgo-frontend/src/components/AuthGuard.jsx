@@ -1,4 +1,4 @@
-// File: C:\Users\Amjad Khalil\OneDrive\Desktop\Selggo\selgo-frontend\components\AuthGuard.jsx
+// File: selgo-frontend/src/components/AuthGuard.jsx
 
 "use client";
 import { useEffect, useState } from "react";
@@ -10,42 +10,76 @@ import authService from "@/services/authService";
 const AuthGuard = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { fetchUser } = useAuthStore();
+  const { user, fetchUser } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // Fix hydration mismatch by only running client-side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    // Check if current route needs protection
-    const isProtectedRoute = protectedRoutes.some(route => {
-      if (typeof route === 'string') {
-        return pathname === route;
-      }
-      // Handle pattern routes like '/routes/create-ad/*'
-      if (route.endsWith('*')) {
-        const basePath = route.slice(0, -1);
-        return pathname.startsWith(basePath);
-      }
-      return false;
-    });
+    if (!mounted) return; // Don't run until mounted
 
-    if (isProtectedRoute) {
-      console.log(`Protected route detected: ${pathname}`);
-      
-      // Check if user is authenticated
-      if (!authService.isAuthenticated()) {
-        console.log(`User not authenticated, redirecting to login`);
+    const checkAuth = async () => {
+      // Check if current route needs protection
+      const isProtectedRoute = protectedRoutes.some(route => {
+        if (typeof route === 'string') {
+          if (pathname === route) {
+            return true;
+          }
+          // Handle pattern routes like '/routes/create-ad/*'
+          if (route.endsWith('*')) {
+            const basePath = route.slice(0, -1);
+            return pathname.startsWith(basePath);
+          }
+        }
+        return false;
+      });
+
+      if (isProtectedRoute) {
+        console.log(`🔒 Protected route detected: ${pathname}`);
         
-        // Redirect to login immediately
-        router.push(`/routes/auth/signin?redirect=${encodeURIComponent(pathname)}`);
-        return; // Skip the rest of this effect
+        // Check authentication first
+        const isAuth = authService.isAuthenticated();
+        console.log(`🔍 Authentication check: ${isAuth}`);
+
+        if (!isAuth) {
+          console.log(`❌ User not authenticated, redirecting to login`);
+          // FIXED: Use router.replace() instead of router.push()
+          router.replace(`/routes/auth/signin?redirect=${encodeURIComponent(pathname)}`);
+          return;
+        }
+
+        // If authenticated but no user in store, fetch user data
+        if (!user) {
+          console.log(`👤 Fetching user data...`);
+          try {
+            await fetchUser();
+          } catch (error) {
+            console.error("Failed to fetch user:", error);
+            // FIXED: Use router.replace() instead of router.push()
+            router.replace(`/routes/auth/signin?redirect=${encodeURIComponent(pathname)}`);
+            return;
+          }
+        }
+
+        console.log(`✅ Access granted to: ${pathname}`);
       } else {
-        // User is authenticated, fetch user data
-        fetchUser().finally(() => setLoading(false));
+        console.log(`🌐 Public route: ${pathname}`);
       }
-    } else {
-      // Not a protected route, no need to check auth
+      
       setLoading(false);
-    }
-  }, [pathname, fetchUser, router]);
+    };
+
+    checkAuth();
+  }, [mounted, pathname, user, fetchUser, router]);
+
+  // Don't render anything until mounted (prevents hydration mismatch)
+  if (!mounted) {
+    return null;
+  }
 
   // Show loading state while checking auth
   if (loading) {

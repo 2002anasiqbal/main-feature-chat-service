@@ -1,9 +1,13 @@
 "use client";
 import Image from "next/image";
 
-export default function LeftAlignedCard({ icon, label, title, subtitle }) {
+export default function LeftAlignedCard({ icon, label, title, subtitle, onClick }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4 w-full max-w-md">
+    <div 
+      className="bg-white rounded-xl shadow p-4 w-full max-w-md"
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
       <div className="flex items-center gap-2 mb-2">
         <Image src={icon} alt={label} width={20} height={20} />
         <span className="text-xs font-semibold text-gray-500 uppercase">{label}</span>
