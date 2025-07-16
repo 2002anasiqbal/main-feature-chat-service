@@ -137,10 +137,6 @@ async def search_motorcycles(
     URL: /api/motorcycles/search
     """
     
-    print(f"\n🔍 === SEARCH REQUEST ===")
-    print(f"Parameters: category_name={category_name}, category_id={category_id}, search_term={search_term}")
-    print(f"Pagination: page={page}, per_page={per_page}")
-    
     # If category_name is provided, find the category_id
     if category_name and not category_id:
         category = db.query(models.MotorcycleCategory).filter(
@@ -155,7 +151,6 @@ async def search_motorcycles(
     # First, let's check total count in database
     total_in_db = db.query(models.Motorcycle).count()
     active_in_db = db.query(models.Motorcycle).filter(models.Motorcycle.is_active == True).count()
-    print(f"Database counts: total={total_in_db}, active={active_in_db}")
     
     filters = MotorcycleSearchFilters(
         category_id=category_id,
@@ -176,13 +171,7 @@ async def search_motorcycles(
     )
     
     motorcycles, total = MotorcycleService.search_motorcycles(db, filters, page, per_page)
-    
-    print(f"Search service returned: {len(motorcycles)} motorcycles, total={total}")
-    
-    # Show IDs of returned motorcycles
-    motorcycle_ids = [m.id for m in motorcycles]
-    print(f"Motorcycle IDs returned: {motorcycle_ids}")
-    
+ 
     # Convert to response format
     items = []
     for motorcycle in motorcycles:
@@ -220,8 +209,7 @@ async def search_motorcycles(
         has_prev=page > 1
     )
     
-    print(f"Final response: {len(response.items)} items, total={response.total}")
-    print(f"=== END SEARCH REQUEST ===\n")
+  
     
     return response
 

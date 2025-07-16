@@ -1,7 +1,6 @@
- 
-# selgo-backend/motorcycle-service/src/config.py
+# selgo-backend/motorcycle-service/src/config/config.py
 import os
-from typing import Optional
+from typing import Optional, List
 
 class Settings:
     # Database
@@ -26,19 +25,19 @@ class Settings:
     # Auth Service
     AUTH_SERVICE_URL: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
     
-    # File Upload
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    # File Upload (using your existing settings)
+    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
     ALLOWED_IMAGE_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
-    UPLOAD_DIR: str = "uploads/motorcycles"
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "uploads/motorcycles")
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
     
-    # Loan Calculations
-    DEFAULT_INTEREST_RATE: float = 7.5  # 7.5% annual
-    MIN_LOAN_TERM: int = 12  # months
-    MAX_LOAN_TERM: int = 84  # months
+    # Loan Calculations (using your existing settings)
+    DEFAULT_INTEREST_RATE: float = float(os.getenv("DEFAULT_INTEREST_RATE", "7.5"))  # 7.5% annual
+    MIN_LOAN_TERM: int = int(os.getenv("MIN_LOAN_TERM", "12"))  # months
+    MAX_LOAN_TERM: int = int(os.getenv("MAX_LOAN_TERM", "84"))  # months
     
     # Email (if implementing email notifications)
     SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST")
@@ -46,19 +45,19 @@ class Settings:
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     
-    # CORS
-    ALLOWED_ORIGINS: list = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-    ]
-    
-    # Add production origins based on environment
-    if ENVIRONMENT == "production":
-        ALLOWED_ORIGINS.extend([
-            "https://selgo.com",
-            "https://www.selgo.com",
-        ])
+    # CORS (using your existing settings)
+    @property
+    def ALLOWED_ORIGINS(self) -> List[str]:
+        origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
+        origins = [origin.strip() for origin in origins_str.split(",")]
+        
+        # Add production origins if in production
+        if self.ENVIRONMENT == "production":
+            origins.extend([
+                "https://selgo.com",
+                "https://www.selgo.com",
+            ])
+        
+        return origins
 
 settings = Settings()
-
