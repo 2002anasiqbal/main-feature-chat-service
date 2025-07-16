@@ -9,15 +9,14 @@ import os
 import uuid
 import traceback
 
-from .database import get_db
-from .services import MotorcycleService, MotorcycleCategoryService
-from .schemas import (
+from ..database.database import get_db
+from ..services.services import MotorcycleService, MotorcycleCategoryService
+from ..models.schemas import (
     Motorcycle, MotorcycleCreate, MotorcycleUpdate, MotorcycleListResponse,
     MotorcycleSearchFilters, MapFilterRequest, PaginatedResponse,
-    MotorcycleCategory, MotorcycleCategoryCreate,
-    MessageCreate, Message, LoanCalculationRequest, LoanCalculationResponse
+    MotorcycleCategory, MotorcycleCategoryCreate, LoanCalculationRequest, LoanCalculationResponse
 )
-from . import models
+from ..models import models
 
 router = APIRouter()
 
@@ -356,42 +355,42 @@ async def get_filter_options(db: Session = Depends(get_db)):
         "seller_types": [seller_type.value for seller_type in models.SellerTypeEnum]
     }
 
-# 6. MotorcycleContactModule
-@router.post("/messages/motorcycle/send", response_model=Message)
-async def send_motorcycle_message(
-    message: MessageCreate,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """
-    Contact seller via form (sends email)
-    URL: /api/messages/motorcycle/send
-    """
-    try:
-        # Get motorcycle to verify it exists
-        motorcycle = db.query(models.Motorcycle).filter(
-            models.Motorcycle.id == message.motorcycle_id
-        ).first()
+# # 6. MotorcycleContactModule
+# @router.post("/messages/motorcycle/send", response_model=Message)
+# async def send_motorcycle_message(
+#     message: MessageCreate,
+#     background_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Contact seller via form (sends email)
+#     URL: /api/messages/motorcycle/send
+#     """
+#     try:
+#         # Get motorcycle to verify it exists
+#         motorcycle = db.query(models.Motorcycle).filter(
+#             models.Motorcycle.id == message.motorcycle_id
+#         ).first()
         
-        if not motorcycle:
-            raise HTTPException(status_code=404, detail="Motorcycle not found")
+#         if not motorcycle:
+#             raise HTTPException(status_code=404, detail="Motorcycle not found")
         
-        # Create message
-        new_message = MotorcycleService.send_message(db, message)
+#         # Create message
+#         new_message = MotorcycleService.send_message(db, message)
         
-        # Send email notification in background
-        background_tasks.add_task(
-            send_email_notification,
-            motorcycle.seller.email,
-            motorcycle.title,
-            message.content,
-            message.phone,
-            message.email
-        )
+#         # Send email notification in background
+#         background_tasks.add_task(
+#             send_email_notification,
+#             motorcycle.seller.email,
+#             motorcycle.title,
+#             message.content,
+#             message.phone,
+#             message.email
+#         )
         
-        return new_message
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+#         return new_message
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
 # 7. MotorcycleLoanOfferModule
 @router.post("/tools/motorcycle-loans", response_model=LoanCalculationResponse)
@@ -437,7 +436,6 @@ async def get_motorcycles_by_category_name(
     """
     Get motorcycles by category name (e.g., "Thresher 6000", "Suzuki 6000")
     """
-    print(f"🔍 Getting motorcycles for category: {category_name}")
     
     # Find category by name
     category = db.query(models.MotorcycleCategory).filter(
@@ -462,8 +460,6 @@ async def get_motorcycles_by_category_name(
     # Get motorcycles for this category
     filters = MotorcycleSearchFilters(category_id=category.id)
     motorcycles, total = MotorcycleService.search_motorcycles(db, filters, page, per_page)
-    
-    print(f"📊 Found {len(motorcycles)} motorcycles for category {category_name}")
     
     # Convert to response format
     items = []
@@ -514,7 +510,6 @@ async def get_all_categories(db: Session = Depends(get_db)):
 # Helper functions for background tasks
 async def process_netbill_transaction(motorcycle_id: int):
     """Process netbill transaction in background"""
-    print(f"Processing netbill transaction for motorcycle {motorcycle_id}")
 
 async def send_email_notification(
     seller_email: str,
@@ -529,5 +524,5 @@ async def send_email_notification(
     print(f"From: {sender_email}, Phone: {sender_phone}")
 
 # Import models here to avoid circular imports
-from . import models
+from ..models import models
 from sqlalchemy import func

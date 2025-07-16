@@ -1,4 +1,4 @@
-# selgo-backend/motorcycle-service/src/services.py
+# selgo-backend/motorcycle-service/src/services/services.py
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, text
 from geoalchemy2.functions import ST_DWithin, ST_GeogFromText, ST_Distance
@@ -7,8 +7,9 @@ from decimal import Decimal
 import math
 import requests
 from geoalchemy2.functions import ST_GeogFromText
-from . import models, schemas
-from .auth_client import auth_client
+from ..models import models
+from ..models import schemas
+from ..utils.auth_client import auth_client
 
 class MotorcycleService:    
     
@@ -91,7 +92,7 @@ class MotorcycleService:
                 seller_data = auth_client.get_user_by_id(motorcycle.seller_id)
                 if seller_data:
                     # Create proper SellerInfo object
-                    from .schemas import SellerInfo
+                    from ..models.schemas import SellerInfo
                     from datetime import datetime
                     
                     # Parse created_at properly
@@ -115,7 +116,7 @@ class MotorcycleService:
                     )
                 else:
                     # Fallback if auth service is unavailable
-                    from .schemas import SellerInfo
+                    from ..models.schemas import SellerInfo
                     from datetime import datetime
                     motorcycle.seller = SellerInfo(
                         id=motorcycle.seller_id,
@@ -279,6 +280,8 @@ class MotorcycleService:
         ).group_by(models.Motorcycle.motorcycle_type).all()
         
         return {item.motorcycle_type: item.count for item in result}
+    
+
     
     @staticmethod
     def calculate_loan(

@@ -47,3 +47,4 @@ class Settings(BaseSettings):
 
 # Create settings instance
 settings = Settings()
+

@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import UploadFile, HTTPException
 from PIL import Image
 import aiofiles
-from .config import settings
+from ..config.config import settings
 
 async def save_uploaded_image(file: UploadFile, motorcycle_id: int) -> str:
     """

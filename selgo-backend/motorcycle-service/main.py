@@ -7,7 +7,7 @@ Usage: python main.py
 import uvicorn
 import os
 from src.app import app
-from src.database import create_tables
+from src.database.database import create_tables
 
 def main():
     """

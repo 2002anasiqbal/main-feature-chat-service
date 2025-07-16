@@ -1,7 +1,7 @@
 # selgo-backend/motorcycle-service/src/auth_client.py
 import requests
 from typing import Optional, Dict, Any
-from .config import settings
+from ..config.config import settings
 
 class AuthServiceClient:
     def __init__(self):

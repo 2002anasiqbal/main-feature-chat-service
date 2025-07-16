@@ -49,3 +49,4 @@ def startup_event():
         logger.info("Auth database tables created successfully")
     except Exception as e:
         logger.error(f"Error creating auth database tables: {e}")
+

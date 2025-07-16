@@ -1,5 +1,8 @@
 // const API_URL = 'https://d78u3s-ip-175-107-245-22.tunnelmole.net/api/v1';
 
+// Remove hardcoded URL
+// Replace the hardcoded URL with:
+const API_URL = process.env.NEXT_PUBLIC_BOAT_API_URL || 'http://localhost:8000/api/v1';
 
 import { apiClient } from './authService'; // Use the authenticated client from authService
 

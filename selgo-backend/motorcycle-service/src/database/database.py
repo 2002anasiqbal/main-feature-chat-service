@@ -42,7 +42,7 @@ def create_tables():
     Create all database tables
     """
     try:
-        from .models import Base
+        from ..models.models import Base
         Base.metadata.create_all(bind=engine)
         print("✅ Database tables created successfully!")
     except Exception as e:

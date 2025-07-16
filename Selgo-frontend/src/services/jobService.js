@@ -2,6 +2,8 @@
 
 import axios from 'axios';
 
+
+// Replace the hardcoded URL with:
 const JOB_API_URL = process.env.NEXT_PUBLIC_JOB_API_URL || 'http://localhost:8002/api/v1';
 
 // Create axios instance with default config

@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-const AUTH_API_URL = 'http://localhost:8001/api/v1/auth';
-const BOAT_API_URL = 'http://localhost:8000/api/v1';
+// const AUTH_API_URL = 'http://localhost:8001/api/v1/auth';
+// const BOAT_API_URL = 'http://localhost:8000/api/v1';
+
+// Replace the hardcoded URLs with:
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8001/api/v1/auth';
+const BOAT_API_URL = process.env.NEXT_PUBLIC_BOAT_API_URL || 'http://localhost:8000/api/v1';
+
 
 // Create axios instance for auth
 const authClient = axios.create({

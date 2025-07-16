@@ -1,7 +1,8 @@
 // Selgo-frontend/src/services/motorcycleService.js
-// Simple integration with existing UI - NO UI CHANGES
 
+// Replacing the hardcoded URL with:
 const API_BASE_URL = process.env.NEXT_PUBLIC_MOTORCYCLE_API_URL || 'http://localhost:8003/api';
+// const API_BASE_URL = 'http://blnjt9-ip-175-107-245-22.tunnelmole.net';
 
 class MotorcycleService {
   

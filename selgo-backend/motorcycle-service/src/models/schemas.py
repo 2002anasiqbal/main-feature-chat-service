@@ -1,4 +1,4 @@
-# selgo-backend/motorcycle-service/src/schemas.py
+# selgo-backend/motorcycle-service/src/models/schemas.py
 
 from pydantic import BaseModel, validator
 from typing import List, Optional
@@ -121,7 +121,7 @@ class Motorcycle(MotorcycleBase):
     updated_at: Optional[datetime] = None
     
     category: Optional[MotorcycleCategory] = None
-    seller: Optional[SellerInfo] = None  # Changed to SellerInfo
+    seller: Optional[SellerInfo] = None
     images: List[MotorcycleImage] = []
     
     class Config:
@@ -169,29 +169,6 @@ class MapFilterRequest(BaseModel):
     longitude: float
     radius_km: int = 50
     filters: Optional[MotorcycleSearchFilters] = None
-
-class MessageCreate(BaseModel):
-    receiver_id: int
-    motorcycle_id: int
-    subject: Optional[str] = None
-    content: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
-
-class Message(BaseModel):
-    id: int
-    sender_id: Optional[int] = None
-    receiver_id: int
-    motorcycle_id: int
-    subject: Optional[str] = None
-    content: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    is_read: bool
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class LoanCalculationRequest(BaseModel):
     price: Decimal

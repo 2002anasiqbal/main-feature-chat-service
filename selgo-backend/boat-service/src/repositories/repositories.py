@@ -228,19 +228,7 @@ class BoatRepository:
         # Get total count before pagination
         total = query.count()
         print(f"Total matches before pagination: {total}")
-        
-        # Apply sorting
-        
-        # if hasattr(filters, 'sort_by') and filters.sort_by:
-        #     sort_column = getattr(Boat, filters.sort_by, Boat.created_at)
-        #     if hasattr(filters, 'sort_order') and filters.sort_order == "asc":
-        #         query = query.order_by(asc(sort_column))
-        #     else:
-        #         query = query.order_by(desc(sort_column))
-        # else:
-        #     # Default sort by created_at descending
-        #     query = query.order_by(desc(Boat.created_at))
-        
+
         # Apply pagination
         if hasattr(filters, 'offset') and hasattr(filters, 'limit'):
             query = query.offset(filters.offset).limit(filters.limit)
