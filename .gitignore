@@ -26,6 +26,8 @@ Selgo-frontend/coverage/
 # Python Virtual Environments (Backend)
 selgo-backend/auth-service/venv_auth/
 selgo-backend/boat-service/venv/
+selgo-backend/job-service/venv_job/
+selgo-backend/motorcycle-service/env_mc/
 selgo-backend/venv/
 selgo-backend/env/
 selgo-backend/ENV/
@@ -96,20 +98,15 @@ yarn-error.log*
 
 # OS
 Thumbs.db
-ehthumbs.dbselgo-backend/job-service/ 
 ehthumbs.db
-
-# Additional virtual environments (if any)
-selgo-backend/job-service/venv_job/
-selgo-backend/motorcycle-service/env_mc/
 
 # Additional safety patterns
 *.log
 logs/
-uploads/*
-!uploads/.gitkeep
 
 # Uploads - exclude all files but keep directory structure
+uploads/*
+!uploads/.gitkeep
 selgo-backend/*/uploads/*
 !selgo-backend/*/uploads/.gitkeep
 **/uploads/*.jpeg
@@ -117,3 +114,6 @@ selgo-backend/*/uploads/*
 **/uploads/*.png
 **/uploads/*.gif
 **/uploads/*.pdf
+
+# Alembic migrations (database)
+selgo-backend/*/alembic/versions/*.pyc
