@@ -6,6 +6,7 @@ import MotorcycleDetail from "@/components/MC/MotorcycleDetail";
 import LocationMap from "@/components/general/LocationMap";
 import useAuthStore from "@/store/store";
 
+import Page from "@/components/GenerateCard"; // Use your existing component
 // Enhanced geocoding function
 async function geocodeLocationName(locationName) {
   try {
@@ -38,7 +39,8 @@ export default function MotorcycleDetailPage() {
   const [motorcycle, setMotorcycle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapCoordinates, setMapCoordinates] = useState(null);
-  
+  const [similarMotorcycles, setSimilarMotorcycles] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   // Loan calculator state
   const [loanParams, setLoanParams] = useState({
     price: 0,
@@ -76,6 +78,39 @@ export default function MotorcycleDetailPage() {
       fetchMotorcycleDetails();
     }
   }, [motorcycleId]);
+
+  useEffect(() => {
+  const fetchSimilarMotorcycles = async () => {
+    if (!motorcycle) return;
+    
+    setLoadingSimilar(true);
+    try {
+      console.log("🔍 Fetching similar motorcycles for:", motorcycle.title);
+      
+      const searchFilters = {
+        brand: motorcycle.brand,
+        
+      };
+      
+      const response = await motorcycleService.searchMotorcycles(searchFilters, 1, 6);
+      
+      // Filter out the current motorcycle
+      const similar = (response.items || [])
+        .filter(item => item.id !== motorcycle.id)
+        .slice(0, 6); // Take 6 similar motorcycles
+      
+      console.log("✅ Found similar motorcycles:", similar);
+      setSimilarMotorcycles(similar);
+    } catch (error) {
+      console.error("❌ Error fetching similar motorcycles:", error);
+      setSimilarMotorcycles([]);
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+
+  fetchSimilarMotorcycles();
+}, [motorcycle]);
 
   // Geocode location for map
   useEffect(() => {
@@ -154,14 +189,28 @@ export default function MotorcycleDetailPage() {
       )}
 
       {/* More like this section */}
-      <div className="mt-8 px-4">
-        <h2 className="text-2xl font-bold mb-6">More like this</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-gray-100 rounded-lg p-4 text-center">
-            <p className="text-gray-600">Similar motorcycles will be displayed here...</p>
-          </div>
-        </div>
-      </div>
+     {/* More like this section */}
+<div className="mt-8">
+  <h2 className="text-2xl font-bold mb-6 px-4">More like this</h2>
+  
+  {loadingSimilar ? (
+    <div className="flex justify-center items-center h-32">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+      <span className="ml-4 text-gray-600">Loading similar motorcycles...</span>
+    </div>
+  ) : similarMotorcycles.length > 0 ? (
+    <Page 
+      columns={3}
+      route="/routes/motor-cycle/category"
+      cards={similarMotorcycles}
+      disableAutoFetch={true}
+    />
+  ) : (
+    <div className="bg-gray-100 rounded-lg p-8 text-center mx-4">
+      <p className="text-gray-600">No similar motorcycles found in our database.</p>
+    </div>
+  )}
+</div>
     </div>
   );
 }

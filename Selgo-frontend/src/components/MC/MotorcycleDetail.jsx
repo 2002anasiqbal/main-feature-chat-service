@@ -188,7 +188,7 @@ const MotorcycleDetail = ({
           )}
         </div>
 
-        {/* Removed Heart and Share Icons */}
+ 
       </div>
 
       {/* Motorcycle Information - Below Image */}

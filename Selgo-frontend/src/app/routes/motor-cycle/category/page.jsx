@@ -17,6 +17,13 @@ export default function TwoColumnLayoutPage() {
   const [currentCategory, setCurrentCategory] = useState("All Motorcycles");
   const [searchValue, setSearchValue] = useState(""); // Track search input value
 
+  // const navigateToMap = () => {
+  //   router.push("/routes/motor-cycle/map");
+  // };
+
+  // NEW: Track the current category filter
+  const [categoryFilter, setCategoryFilter] = useState(null);
+
   const navigateToMap = () => {
     router.push("/routes/motor-cycle/map");
   };
@@ -35,6 +42,7 @@ export default function TwoColumnLayoutPage() {
       if (categoryFromUrl && !filters?.search_term) {
         // If we have a category from URL and no search term, use category
         searchFilters.category_name = categoryFromUrl;
+         setCategoryFilter(categoryFromUrl);
         setCurrentCategory(categoryFromUrl);
       }
       
@@ -42,7 +50,10 @@ export default function TwoColumnLayoutPage() {
         // Merge any additional filters
         searchFilters = { ...searchFilters, ...filters };
         
-        if (filters.search_term) {
+          if (filters.search_term && categoryFromUrl) {
+          searchFilters.category_name = categoryFromUrl; // Ensure category is maintained
+          setCurrentCategory(`Search in ${categoryFromUrl}: ${filters.search_term}`);
+        } else if (filters.search_term) {
           setCurrentCategory(`Search: ${filters.search_term}`);
         }
       }
@@ -76,9 +87,7 @@ export default function TwoColumnLayoutPage() {
   const handleSearchChange = (e) => {
     const searchTerm = e.target.value;
     setSearchValue(searchTerm); // Update the input value
-    
-    console.log("🔍 Search input changed:", searchTerm);
-    
+
     // Clear any existing timeout
     if (window.searchTimeout) {
       clearTimeout(window.searchTimeout);
@@ -87,27 +96,41 @@ export default function TwoColumnLayoutPage() {
     // Debounce the search
     window.searchTimeout = setTimeout(() => {
       if (searchTerm.trim()) {
-        // If there's a search term, search across all motorcycles
-        console.log("🔍 Performing search for:", searchTerm);
-        loadMotorcycles({ search_term: searchTerm.trim() });
+         const searchFilters = { search_term: searchTerm.trim() };
+        
+        // If we're in a specific category, maintain that category in the search
+        if (categoryFilter) {
+          searchFilters.category_name = categoryFilter;
+          console.log(`🔍 Searching within category "${categoryFilter}" for: "${searchTerm}"`);
+        } else {
+          console.log(`🔍 Searching across all categories for: "${searchTerm}"`);
+        }
+        
+        loadMotorcycles(searchFilters);
       } else {
-        // If search is cleared, restore to original state (category or all)
-        console.log("🔄 Search cleared, restoring original results");
+        // FIXED: When search is cleared, restore to category or all
+        console.log("🔄 Search cleared, restoring to category filter");
         const categoryFromUrl = searchParams.get('category');
         if (categoryFromUrl) {
           setCurrentCategory(categoryFromUrl);
-          loadMotorcycles(); // This will load the category
+          loadMotorcycles(); // This will load the category due to useEffect
         } else {
           setCurrentCategory("All Motorcycles");
           loadMotorcycles(); // This will load all motorcycles
         }
       }
-    }, 300); // 300ms debounce
+    }, 300);  // 300ms debounce
   };
 
   // Handle filter changes from sidebar
   const handleFilterChange = (filters) => {
     console.log("🔍 Filters received from sidebar:", filters);
+  // FIXED: Maintain category when applying sidebar filters
+    if (categoryFilter) {
+      filters.category_name = categoryFilter;
+      console.log(`🔍 Applying sidebar filters within category "${categoryFilter}"`);
+    }
+    
     // Clear search input when using sidebar filters
     setSearchValue("");
     loadMotorcycles(filters);
@@ -115,7 +138,6 @@ export default function TwoColumnLayoutPage() {
 
   // Load initial motorcycles
   useEffect(() => {
-    console.log("🚀 Component mounted, loading motorcycles");
     loadMotorcycles();
   }, [searchParams]);
 

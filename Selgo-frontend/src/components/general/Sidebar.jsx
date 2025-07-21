@@ -6,12 +6,12 @@ import "leaflet/dist/leaflet.css";
 import CategoriesSelector from "./catagory";
 import MapControls from "./MapControls";
 import boatService from "@/services/boatService";
+import motorcycleService from "@/services/motorcycleService"; // Add this import
 
 // Default icon fix for Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// For map marker functionality
 const DefaultIcon = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow,
@@ -21,39 +21,21 @@ const DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function Sidebar({ onFilterChange }) {
-  // Controls the entire sidebar's open/closed state on mobile
+  // All your existing state variables...
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // Features state 
   const [features, setFeatures] = useState([]);
   const [selectedFeatures, setSelectedFeatures] = useState([]);
-
-  // Distance slider state
   const [distance, setDistance] = useState(50);
-
-  // Price range state
   const [price, setPrice] = useState({ from: "", to: "" });
-
-  // Year range state
   const [year, setYear] = useState({ from: "", to: "" });
-
-  // Length range state
   const [length, setLength] = useState({ from: "", to: "" });
-
-  // Boat condition state
   const [condition, setCondition] = useState(null);
-
-  // Other filters
   const [filters, setFilters] = useState({
     condition: null,
     seller_type: null,
     ad_type: null
   });
-
-  // Location from map
   const [mapLocation, setMapLocation] = useState(null);
-  
-  // Toggle checkboxes
   const [checkboxes, setCheckboxes] = useState({
     fixFinished: false,
     freeShipping: false,
@@ -64,59 +46,75 @@ export default function Sidebar({ onFilterChange }) {
     forRent: false
   });
 
-  // Get available features on component mount
+  // NEW: Detect if we're on motorcycle route
+  const [isMotorcycleRoute, setIsMotorcycleRoute] = useState(false);
+
+  useEffect(() => {
+    const checkRoute = () => {
+      const isMC = window.location.pathname.includes('motor-cycle');
+      setIsMotorcycleRoute(isMC);
+      console.log("🛣️ Route detected:", isMC ? "Motorcycle" : "Boat");
+    };
+    
+    checkRoute();
+    // Listen for route changes
+    window.addEventListener('popstate', checkRoute);
+    return () => window.removeEventListener('popstate', checkRoute);
+  }, []);
+
+  // Update features fetch to skip for motorcycles (since you don't have features)
   useEffect(() => {
     const fetchFeatures = async () => {
+      if (isMotorcycleRoute) {
+        // For motorcycles, skip features since you don't have that endpoint
+        setFeatures([]);
+        return;
+      }
+      
       try {
         const featuresData = await boatService.getFeatures();
         setFeatures(featuresData);
       } catch (error) {
         console.error("Error fetching features:", error);
+        setFeatures([]);
       }
     };
 
     fetchFeatures();
-  }, []);
+  }, [isMotorcycleRoute]);
 
-  // Toggle for "Fix Finished" and "Free Shipping"
+  // Your existing handler functions...
   const handleCheckboxChange = (checkboxName) => {
     setCheckboxes(prev => {
       const newState = { ...prev, [checkboxName]: !prev[checkboxName] };
       
-      // Map checkboxes to actual filter values
       let newFilters = { ...filters };
       
-      // Seller type filters
       if (checkboxName === 'retailer' || checkboxName === 'private') {
-        // Set seller type based on checkbox
         if (checkboxName === 'retailer' && newState.retailer) {
           newFilters.seller_type = 'dealer';
         } else if (checkboxName === 'private' && newState.private) {
           newFilters.seller_type = 'private';
         } else {
-          newFilters.seller_type = null; // Neither is checked
+          newFilters.seller_type = null;
         }
       }
       
-      // Ad type filters
       if (checkboxName === 'forSale' || checkboxName === 'forRent') {
-        // Set ad type based on checkbox
         if (checkboxName === 'forSale' && newState.forSale) {
-          newFilters.ad_type = 'for_sale'; // Use lowercase with underscore
+          newFilters.ad_type = 'for_sale';
         } else if (checkboxName === 'forRent' && newState.forRent) {
-          newFilters.ad_type = 'for_rent'; // Use lowercase with underscore
+          newFilters.ad_type = 'for_rent';
         } else {
-          newFilters.ad_type = null; // Neither is checked
+          newFilters.ad_type = null;
         }
       }
       
       setFilters(newFilters);
-      
       return newState;
     });
   };
 
-  // Feature selection handler  
   const handleFeatureChange = (featureId) => {
     setSelectedFeatures(prev => {
       if (prev.includes(featureId)) {
@@ -127,7 +125,6 @@ export default function Sidebar({ onFilterChange }) {
     });
   };
 
-  // Condition selection handler
   const handleConditionChange = (condition) => {
     setCondition(prev => prev === condition ? null : condition);
     setFilters(prev => ({
@@ -136,100 +133,97 @@ export default function Sidebar({ onFilterChange }) {
     }));
   };
 
-  // Price range handlers
   const handlePriceChange = (type, value) => {
     setPrice(prev => ({ ...prev, [type]: value }));
   };
 
-  // Year range handlers  
   const handleYearChange = (type, value) => {
     setYear(prev => ({ ...prev, [type]: value }));
   };
 
-  // Length range handlers
   const handleLengthChange = (type, value) => {
     setLength(prev => ({ ...prev, [type]: value }));
   };
 
-  // Search button handler
- const handleSearch = () => {
-  // Construct the filter object
-  const filterObject = {
-    price_min: price.from ? parseFloat(price.from) : null,
-    price_max: price.to ? parseFloat(price.to) : null,
-    year_min: year.from ? parseInt(year.from) : null,
-    year_max: year.to ? parseInt(year.to) : null,
-    length_min: length.from ? parseFloat(length.from) : null,
-    length_max: length.to ? parseFloat(length.to) : null,
-    features: selectedFeatures.length > 0 ? selectedFeatures : null,
-    condition: condition,
-    seller_type: filters.seller_type,
-    ad_type: filters.ad_type
+  // UPDATE: Search button handler to work with both boats and motorcycles
+  const handleSearch = () => {
+    console.log("🔍 Apply Filters clicked for:", isMotorcycleRoute ? "Motorcycles" : "Boats");
+    
+    const filterObject = {
+      price_min: price.from ? parseFloat(price.from) : null,
+      price_max: price.to ? parseFloat(price.to) : null,
+      year_min: year.from ? parseInt(year.from) : null,
+      year_max: year.to ? parseInt(year.to) : null,
+      condition: condition,
+      seller_type: filters.seller_type,
+      ad_type: filters.ad_type
+    };
+
+    // Add motorcycle-specific or boat-specific filters
+    if (isMotorcycleRoute) {
+      // For motorcycles, use different field names
+      filterObject.mileage_min = length.from ? parseFloat(length.from) : null;
+      filterObject.mileage_max = length.to ? parseFloat(length.to) : null;
+    } else {
+      // For boats, use length
+      filterObject.length_min = length.from ? parseFloat(length.from) : null;
+      filterObject.length_max = length.to ? parseFloat(length.to) : null;
+      filterObject.features = selectedFeatures.length > 0 ? selectedFeatures : null;
+    }
+
+    // Add map-based location if selected
+    if (mapLocation) {
+      console.log("Including geo-filter with location:", mapLocation);
+      filterObject.location = mapLocation;
+      filterObject.distance = distance;
+    }
+
+    // If "new today" is checked, add created_at filter
+    if (checkboxes.newToday) {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      filterObject.created_after = todayStr;
+    }
+
+    console.log("✅ Final filter object:", JSON.stringify(filterObject, null, 2));
+
+    if (onFilterChange) {
+      onFilterChange(filterObject);
+    }
   };
 
-  // Add map-based location if selected
-  if (mapLocation) {
-    console.log("Including geo-filter with location:", mapLocation);
-    filterObject.location = mapLocation;
-    filterObject.distance = distance;
-  }
-
-  // If "new today" is checked, add created_at filter
-  if (checkboxes.newToday) {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    filterObject.created_after = todayStr;
-  }
-
-  // Debug the final filter object
-  console.log("✅ Final filter object to be sent:", JSON.stringify(filterObject, null, 2));
-  console.log("✅ Selected condition:", condition);
-  console.log("✅ Filters object:", JSON.stringify(filters, null, 2));
-  console.log("✅ Selected features:", selectedFeatures);
-  console.log("✅ Checkboxes state:", JSON.stringify(checkboxes, null, 2));
-
-  // Pass the constructed filter to parent component
-  if (onFilterChange) {
-    onFilterChange(filterObject);
-  }
-};
-
-  // Map click handler (to set location for filtering)
+  // Your existing map handlers...
   const MapClickHandler = () => {
-  const map = useMap();
-  
-  useEffect(() => {
-    map.on('click', (e) => {
-      const newLocation = {
-        latitude: e.latlng.lat,
-        longitude: e.latlng.lng
-      };
-      
-      console.log("Selected map location:", newLocation);
-      setMapLocation(newLocation);
-    });
+    const map = useMap();
     
-    return () => {
-      map.off('click');
-    };
-  }, [map]);
-  
-  return null;
-};
+    useEffect(() => {
+      map.on('click', (e) => {
+        const newLocation = {
+          latitude: e.latlng.lat,
+          longitude: e.latlng.lng
+        };
+        
+        console.log("Selected map location:", newLocation);
+        setMapLocation(newLocation);
+      });
+      
+      return () => {
+        map.off('click');
+      };
+    }, [map]);
+    
+    return null;
+  };
 
-  // --- Mobile Sidebar Handlers ---
   const handleOpenSidebar = () => setIsSidebarOpen(true);
   const handleCloseSidebar = () => setIsSidebarOpen(false);
 
-  // We'll stop clicks from propagating inside the sidebar,
-  // so clicks inside don't close it
   const sidebarRef = useRef(null);
   const stopPropagation = (e) => e.stopPropagation();
 
   useEffect(() => {
-    // Trigger initial filter on component mount
     handleSearch();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   return (
     <div className="overflow-y-auto hide-scrollbar">
@@ -240,11 +234,7 @@ export default function Sidebar({ onFilterChange }) {
       >
         ☰
       </button>
-      {/* 
-        1) Transparent Overlay for closing sidebar when clicked outside.
-           It's invisible (no background color), 
-           but still intercepts clicks to close the sidebar.
-      */}
+
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-transparent"
@@ -252,11 +242,6 @@ export default function Sidebar({ onFilterChange }) {
         />
       )}
 
-      {/* 
-        2) Sidebar Container 
-           - We use onClick={stopPropagation} inside to prevent closing 
-             when user clicks *inside* the sidebar. 
-      */}
       <div
         ref={sidebarRef}
         onClick={stopPropagation}
@@ -271,7 +256,6 @@ export default function Sidebar({ onFilterChange }) {
           sm:translate-x-0
         `}
       >
-        {/* Close Button (mobile only) */}
         <button
           onClick={handleCloseSidebar}
           className="absolute top-4 right-4 text-gray-600 sm:hidden"
@@ -279,14 +263,12 @@ export default function Sidebar({ onFilterChange }) {
           ×
         </button>
 
-        {/* === Actual Sidebar Content Below === */}
-
-        {/* 1) Categories Section */}
+        {/* Categories Section */}
         <div>
           <CategoriesSelector />
         </div>
 
-        {/* 2) Condition Section */}
+        {/* Condition Section */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold mb-2">Condition</h3>
           <div className="space-y-2">
@@ -297,7 +279,7 @@ export default function Sidebar({ onFilterChange }) {
               { value: 'good', label: 'Good' },
               { value: 'fair', label: 'Fair' },
               { value: 'poor', label: 'Poor' },
-              { value: 'project_boat', label: 'Project Boat' }
+              { value: 'project_boat', label: isMotorcycleRoute ? 'Project Bike' : 'Project Boat' }
             ].map(conditionOption => (
               <label key={conditionOption.value} className="flex items-center space-x-2 text-gray-800 text-sm">
                 <input
@@ -312,7 +294,7 @@ export default function Sidebar({ onFilterChange }) {
           </div>
         </div>
 
-        {/* 3) Fix Finished & Other Checkboxes */}
+        {/* Options Section */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold mb-2">Options</h3>
           <div className="space-y-2">
@@ -330,7 +312,7 @@ export default function Sidebar({ onFilterChange }) {
                 type="checkbox"
                 checked={checkboxes.freeShipping}
                 onChange={() => handleCheckboxChange("freeShipping")}
-                className="w-4 h-4 "
+                className="w-4 h-4"
               />
               <span>Free shipping</span>
             </label>
@@ -339,27 +321,27 @@ export default function Sidebar({ onFilterChange }) {
                 type="checkbox"
                 checked={checkboxes.newToday}
                 onChange={() => handleCheckboxChange("newToday")}
-                className="w-4 h-4 "
+                className="w-4 h-4"
               />
               <span>New today</span>
             </label>
           </div>
         </div>
 
-        {/* 4) Search Field */}
+        {/* Search Field */}
         <div className="mt-5 px-4">
           <input
             type="text"
-            placeholder="Search"
+            placeholder={`Search ${isMotorcycleRoute ? 'motorcycles' : 'boats'}`}
             className="w-full p-2 border rounded text-gray-800"
             onChange={(e) => setFilters(prev => ({ ...prev, search_term: e.target.value }))}
           />
         </div>
 
-        {/* 5) Map Section */}
+        {/* Map Section */}
         <div className="relative w-full h-64 rounded-md overflow-hidden mt-5 px-4">
           <MapContainer
-            center={[60.472, 8.4689]} // Example center (Norway)
+            center={[60.472, 8.4689]}
             zoom={5}
             className="w-full h-full"
             zoomControl={false}
@@ -368,7 +350,6 @@ export default function Sidebar({ onFilterChange }) {
             <MapControls />
             <MapClickHandler />
             
-            {/* Display marker where the user clicked */}
             {mapLocation && (
               <Marker 
                 position={[mapLocation.latitude, mapLocation.longitude]}
@@ -381,7 +362,7 @@ export default function Sidebar({ onFilterChange }) {
           </MapContainer>
         </div>
 
-        {/* 6) Distance Slider */}
+        {/* Distance Slider */}
         <div className="mt-5 px-4">
           <label className="text-gray-700 text-sm">Distance</label>
           <input
@@ -395,23 +376,25 @@ export default function Sidebar({ onFilterChange }) {
           <div className="text-right text-gray-600 text-sm">{distance} km</div>
         </div>
 
-        {/* 7) Features Checkboxes */}
-        <div className="mt-5 px-4">
-          <h3 className="text-gray-700 text-sm font-bold">Features</h3>
-          {features.map((feature) => (
-            <label key={feature.id} className="flex items-center space-x-2 text-gray-700 text-sm">
-              <input 
-                type="checkbox" 
-                className="w-4 h-4"
-                checked={selectedFeatures.includes(feature.id)}
-                onChange={() => handleFeatureChange(feature.id)}
-              />
-              <span>{feature.name}</span>
-            </label>
-          ))}
-        </div>
+        {/* Features Checkboxes - Only for boats */}
+        {!isMotorcycleRoute && features.length > 0 && (
+          <div className="mt-5 px-4">
+            <h3 className="text-gray-700 text-sm font-bold">Features</h3>
+            {features.map((feature) => (
+              <label key={feature.id} className="flex items-center space-x-2 text-gray-700 text-sm">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4"
+                  checked={selectedFeatures.includes(feature.id)}
+                  onChange={() => handleFeatureChange(feature.id)}
+                />
+                <span>{feature.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
 
-        {/* 8) Private/Dealer */}
+        {/* Private/Dealer */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold">Private/Dealer</h3>
           <label className="flex items-center space-x-2 text-gray-700 text-sm">
@@ -434,7 +417,7 @@ export default function Sidebar({ onFilterChange }) {
           </label>
         </div>
 
-        {/* 9) Ad Type */}
+        {/* Ad Type */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold">Ad Type</h3>
           <label className="flex items-center space-x-2 text-gray-700 text-sm">
@@ -457,7 +440,7 @@ export default function Sidebar({ onFilterChange }) {
           </label>
         </div>
         
-        {/* 10) Price Section */}
+        {/* Price Section */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold">Price</h3>
           <div className="flex items-center space-x-2 mt-1">
@@ -484,7 +467,7 @@ export default function Sidebar({ onFilterChange }) {
           </div>
         </div>
         
-        {/* 11) Year Range */}
+        {/* Year Range */}
         <div className="mt-5 px-4">
           <h3 className="text-gray-700 text-sm font-bold">Year</h3>
           <div className="flex items-center space-x-2 mt-1">
@@ -511,9 +494,11 @@ export default function Sidebar({ onFilterChange }) {
           </div>
         </div>
 
-        {/* 12) Length Range */}
+        {/* Length Range - Dynamic label */}
         <div className="mt-5 px-4">
-          <h3 className="text-gray-700 text-sm font-bold">Length (feet)</h3>
+          <h3 className="text-gray-700 text-sm font-bold">
+            {isMotorcycleRoute ? "Mileage (km)" : "Length (feet)"}
+          </h3>
           <div className="flex items-center space-x-2 mt-1">
             <div className="flex flex-col">
               <input
@@ -538,7 +523,7 @@ export default function Sidebar({ onFilterChange }) {
           </div>
         </div>
 
-        {/* 13) Search Button */}
+        {/* Apply Filters Button */}
         <div className="mt-5 px-4 pb-10">
           <button
             onClick={handleSearch}

@@ -88,13 +88,10 @@ export default function MCMain() {
   const handleSearchChange = (e) => {
     const searchValue = e.target.value;
     setSearchTerm(searchValue);
-    
-    console.log("🔍 Search term changed:", searchValue);
-    
+        
     if (searchValue.trim() === "") {
       // If search is empty, show all motorcycles
       setFilteredMotorcycles(motorcycles);
-      console.log("🔄 Search cleared, showing all motorcycles");
     } else {
       // Filter motorcycles based on search term
       const filtered = motorcycles.filter(motorcycle => 
@@ -157,7 +154,9 @@ export default function MCMain() {
         imageBasePath="/assets/MC/"
         size="h-32 w-32"
       />
-
+<div className="flex justify-center items-center mt-8">
+        <ButtonCard />
+      </div>
       {/* NEW: Find Bikes Section with Real Data */}
       <div className="mt-12">
         <h2 className="text-3xl font-bold text-gray-800 mb-6">
@@ -189,17 +188,13 @@ export default function MCMain() {
         ) : (
           <Page 
             columns={3}
-            route="/routes/motor-cycle"
+            route="/routes/motor-cycle/category"
             cards={formatMotorcyclesForDisplay(filteredMotorcycles)}
             disableAutoFetch={true}
           />
         )}
       </div>
-
-      {/* ORIGINAL Centered Button - NO CHANGES */}
-      <div className="flex justify-center items-center mt-8">
-        <ButtonCard />
-      </div>
+      
     </div>
   );
 }
