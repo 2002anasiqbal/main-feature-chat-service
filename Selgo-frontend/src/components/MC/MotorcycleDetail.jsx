@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { FaArrowLeft, FaPhone, FaEnvelope } from "react-icons/fa";
 import { FiArrowRight, FiArrowLeft } from "react-icons/fi";
 import useAuthStore from "@/store/store";
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import motorcycleService from "@/services/motorcycleService";
 
 const MotorcycleDetail = ({
   motorcycle,
@@ -18,7 +21,8 @@ const MotorcycleDetail = ({
   const router = useRouter();
   const [currentImage, setCurrentImage] = useState(0);
   const [showExpandedSpecs, setShowExpandedSpecs] = useState(false);
-  
+  const [isFavorite, setIsFavorite] = useState(false);
+const [favoriteLoading, setFavoriteLoading] = useState(false);
   // Get user from store AND check localStorage directly as fallback
   const { user, fetchUser } = useAuthStore();
   const [localUser, setLocalUser] = useState(null);
@@ -58,6 +62,25 @@ const MotorcycleDetail = ({
 
     checkUserState();
   }, [user, fetchUser]);
+
+  // Add this useEffect after your existing useEffects
+useEffect(() => {
+  const checkFavoriteStatus = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (token && motorcycle?.id) {
+        const favorite = await motorcycleService.isMotorcycleFavorite(motorcycle.id);
+        setIsFavorite(favorite);
+      }
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  if (motorcycle) {
+    checkFavoriteStatus();
+  }
+}, [motorcycle]);
 
   // Use localUser as the primary user source
   const currentUser = localUser || user;
@@ -132,6 +155,26 @@ const MotorcycleDetail = ({
     // Simple alert for now
     alert(`Call seller: ${motorcycle.seller?.phone || 'Phone number not available'}`);
   };
+  // Add this function after your existing functions
+const handleFavoriteToggle = async () => {
+  if (!currentUser) {
+    router.push(`/routes/auth/signin?redirect=${encodeURIComponent(window.location.pathname)}`);
+    return;
+  }
+
+  setFavoriteLoading(true);
+  try {
+    const response = await motorcycleService.toggleFavorite(motorcycle.id);
+    setIsFavorite(response.is_favorite);
+    
+    console.log(response.is_favorite ? "Added to favorites!" : "Removed from favorites!");
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    alert("Error updating favorites. Please try again.");
+  } finally {
+    setFavoriteLoading(false);
+  }
+};
 
   // Debug logging
   useEffect(() => {
@@ -310,7 +353,7 @@ const MotorcycleDetail = ({
           </div>
 
           {/* Flexible motorcycle trading */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mt-6">
+          {/* <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mt-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-blue-600">🤝</span>
               <span className="font-semibold text-blue-800">Flexible motorcycle trading</span>
@@ -318,7 +361,7 @@ const MotorcycleDetail = ({
             <p className="text-sm text-blue-700">
               We help you through all the steps of motorcycle sales
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Seller Info Card */}
@@ -366,8 +409,13 @@ const MotorcycleDetail = ({
                 <FaPhone size={16} />
                 Call Seller
               </button>
+
+              {/* ADD THIS - Heart/Favorite button */}
+  
             </div>
           )}
+
+          
 
           {/* Owner Actions */}
           {isOwner && (

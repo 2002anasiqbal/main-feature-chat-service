@@ -1,5 +1,5 @@
 # selgo-backend/motorcycle-service/src/models.py
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Index, Text, DECIMAL, DateTime, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -130,3 +130,20 @@ class LoanOffer(Base):
     monthly_payment = Column(DECIMAL(10, 2), nullable=False)
     total_amount = Column(DECIMAL(10, 2), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+
+class UserFavoriteMotorcycle(Base):
+    __tablename__ = 'user_favorite_motorcycles'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)  # References user in auth service
+    motorcycle_id = Column(Integer, ForeignKey('motorcycles.id', ondelete='CASCADE'), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    motorcycle = relationship("Motorcycle", backref="favorited_by")
+    
+    # Ensure a user can only favorite a motorcycle once
+    __table_args__ = (
+        Index('idx_user_motorcycle_unique', 'user_id', 'motorcycle_id', unique=True),
+    )

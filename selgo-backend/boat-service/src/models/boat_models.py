@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Table, Text
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Table, Text, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
@@ -153,3 +153,19 @@ class BoatFixDoneRequest(Base):
     
     # Relationships
     boat = relationship("Boat", back_populates="fix_requests")
+
+class UserFavorite(Base):
+    __tablename__ = 'user_favorites'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    boat_id = Column(Integer, ForeignKey('boats.id', ondelete='CASCADE'), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relationships
+    boat = relationship("Boat", backref="favorited_by")
+    
+    # Ensure a user can only favorite a boat once
+    __table_args__ = (
+        Index('idx_user_boat_unique', 'user_id', 'boat_id', unique=True),
+    )

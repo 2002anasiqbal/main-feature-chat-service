@@ -1,12 +1,71 @@
 // const API_URL = 'https://d78u3s-ip-175-107-245-22.tunnelmole.net/api/v1';
 
-// Remove hardcoded URL
+
 // Replace the hardcoded URL with:
 const API_URL = process.env.NEXT_PUBLIC_BOAT_API_URL || 'http://localhost:8000/api/v1';
 
 import { apiClient } from './authService'; // Use the authenticated client from authService
 
 const boatService = {
+
+   // Add this new search method
+  searchBoats: async (filters = {}, page = 1, perPage = 20) => {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: perPage.toString()
+      });
+
+      // Add all filter parameters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value != null && value !== '' && value !== undefined) {
+          // ✅ FIXED: Handle array of boat types properly
+          if (key === 'boat_types' && Array.isArray(value)) {
+            params.append('boat_types', value.join(','));
+            console.log(`🚢 Adding boat_types parameter: ${value.join(',')}`);
+          } else {
+            params.append(key, value.toString());
+          }
+        }
+      });
+
+      const url = `/boats/search?${params}`;
+      console.log("🌐 Making boat search request to:", url);
+
+      const response = await apiClient.get(url);
+      
+      if (!response.data) {
+        console.error(`❌ Boat search API error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = response.data;
+      console.log("📥 Boat search response:", data);
+      
+      // Ensure we return a consistent format
+      return {
+        items: data.items || [],
+        total: data.total || 0,
+        page: page,
+        per_page: perPage,
+        pages: Math.ceil((data.total || 0) / perPage),
+        has_next: data.total > page * perPage,
+        has_prev: page > 1
+      };
+    } catch (error) {
+      console.error('❌ Error searching boats:', error);
+      return {
+        items: [],
+        total: 0,
+        page: page,
+        per_page: perPage,
+        pages: 0,
+        has_next: false,
+        has_prev: false
+      };
+    }
+  },
+
   // Get loan estimate
   getLoanEstimate: async (loanData) => {
     try {
@@ -74,23 +133,24 @@ getBoats: async (skip = 0, limit = 10) => {
 },
   // Filter boats - Enhanced for sidebar filtering
   filterBoats: async (filters) => {
-  try {
-    console.log("🚀 boatService: Sending filter request to API:", JSON.stringify(filters, null, 2));
-    
-    const response = await apiClient.post('/boats/filter', filters);
-    
-    console.log(`🚀 boatService: Filter API response contains ${response.data?.items?.length || 0} boats`);
-    
-    if (response.data?.items?.length === 0) {
-      console.log("No boats found for filter criteria:", filters);
+    try {
+      console.log("🚀 boatService: Sending filter request to API:", JSON.stringify(filters, null, 2));
+      
+      // ✅ ALWAYS use the filter endpoint - it can handle boat_types now
+      const response = await apiClient.post('/boats/filter', filters);
+      
+      console.log(`🚀 boatService: Filter API response contains ${response.data?.items?.length || 0} boats`);
+      
+      if (response.data?.items?.length === 0) {
+        console.log("No boats found for filter criteria:", filters);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error filtering boats:', error.response?.data || error);
+      throw error;
     }
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error filtering boats:', error.response?.data || error);
-    throw error;
-  }
-},
+  },
 
   // Get recommended boats
   getRecommendedBoats: async (limit = 10) => {
@@ -217,7 +277,59 @@ uploadImage: async (formData) => {
     console.error('Error uploading image:', error);
     throw error;
   }
-}
+ },
+
+// ==================== Favorites Methods ====================
+  
+  // Toggle favorite status
+  toggleFavorite: async (boatId) => {
+    try {
+      const response = await apiClient.post('/boats/favorites/toggle', {
+        boat_id: boatId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      throw error;
+    }
+  },
+
+  async getUserFavorites(skip = 0, limit = 100) {
+  try {
+    console.log('🔍 Fetching user favorites...');
+    
+    // Use the correct endpoint from your routes.py: "user-favorites"
+    const response = await apiClient.get(`/boats/user-favorites`);
+    console.log('✅ FAVORITES success:', response.data);
+    return response.data || [];
+    
+  } catch (error) {
+    console.error('❌ Error fetching user favorites:', error.response?.data || error);
+    return [];
+  }
+},
+  // Get favorites count
+  getFavoritesCount: async () => {
+    try {
+      const response = await apiClient.get('/boats/favorites/count');
+      return response.data.count;
+    } catch (error) {
+      console.error('Error fetching favorites count:', error);
+      return 0;
+    }
+  },
+
+  // Check if boat is favorite
+  isBoatFavorite: async (boatId) => {
+    try {
+      const response = await apiClient.get(`/boats/${boatId}/is-favorite`);
+      return response.data.is_favorite;
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+      return false;
+    }
+  },
+
 
 };
 

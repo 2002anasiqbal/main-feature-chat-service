@@ -77,6 +77,11 @@ const MotorcycleForm = ({ category = "Motorcycles" }) => {
     "No warranty", "Manufacturer warranty", "Extended warranty", "Dealer warranty"
   ];
 
+  // Common input styling
+  const inputStyles = "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-500";
+  const selectStyles = "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white";
+  const textareaStyles = "w-full px-3 py-2 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-black bg-white placeholder-gray-500";
+
   // Handle input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -112,133 +117,155 @@ const MotorcycleForm = ({ category = "Motorcycles" }) => {
     });
   };
 
- // Handle form submission
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // CORRECT category mapping - this must match the database
-    const categoryMap = {
-      "Thresher 6000": 1,
-      "Suzuki 6000": 2, 
-      "Motorcycles 6000": 3,
-      "Auto bikes 6000": 4,
-      "Tractor 6000": 5,
-      "Bikes 6000": 6
-    };
+    try {
+      // CORRECT category mapping - this must match the database
+      const categoryMap = {
+        "Thresher 6000": 1,
+        "Suzuki 6000": 2, 
+        "Motorcycles 6000": 3,
+        "Auto bikes 6000": 4,
+        "Tractor 6000": 5,
+        "Bikes 6000": 6
+      };
 
-    // Get the correct category ID
-    const categoryId = categoryMap[category];
-    
-    console.log(`📂 Category: "${category}" -> ID: ${categoryId}`);
-    
-    if (!categoryId) {
-      throw new Error(`Unknown category: ${category}`);
-    }
-
-    // Parse location into city and country
-    const parseLocation = (location) => {
-      if (!location) return { city: "Oslo", country: "Norway" };
+      // Get the correct category ID
+      const categoryId = categoryMap[category];
       
-      const parts = location.split(',').map(part => part.trim());
-      if (parts.length >= 2) {
-        return {
-          city: parts[0],
-          country: parts.slice(1).join(', ')
-        };
+      console.log(`📂 Category: "${category}" -> ID: ${categoryId}`);
+      
+      if (!categoryId) {
+        throw new Error(`Unknown category: ${category}`);
       }
-      return { city: parts[0] || "Oslo", country: "Norway" };
-    };
 
-    const { city, country } = parseLocation(formData.location);
+      // Parse location into city and country
+      const parseLocation = (location) => {
+        if (!location) return { city: "Oslo", country: "Norway" };
+        
+        const parts = location.split(',').map(part => part.trim());
+        if (parts.length >= 2) {
+          return {
+            city: parts[0],
+            country: parts.slice(1).join(', ')
+          };
+        }
+        return { city: parts[0] || "Oslo", country: "Norway" };
+      };
 
-    // Create full address from location field
-    const fullAddress = formData.location || `${city}, ${country}`;
+      const { city, country } = parseLocation(formData.location);
 
-    // Debug what we're sending
-    console.log("🔍 DEBUG - Form processing:");
-    console.log("  location field:", formData.location);
-    console.log("  postal_code field:", formData.postal_code);
-    console.log("  parsed city:", city);
-    console.log("  parsed country:", country);
-    console.log("  full address for backend:", fullAddress);
+      // Create full address from location field
+      const fullAddress = formData.location || `${city}, ${country}`;
 
-    // Prepare data for backend
-    const motorcycleData = {
-      title: formData.brand && formData.model ? `${formData.brand} ${formData.model} ${formData.model_year}` : `${category} for sale`,
-      description: formData.description || `${formData.brand} ${formData.model} from ${formData.model_year}`,
-      brand: formData.brand || "Unknown",
-      model: formData.model || "Unknown", 
-      year: parseInt(formData.model_year) || new Date().getFullYear(),
-      engine_size: parseInt(formData.displacement_ccm) || null,
-      mileage: parseInt(formData.mileage) || null,
-      price: parseFloat(formData.selling_price_nok) || 0,
-      condition: mapConditionToEnum(formData.condition),
-      motorcycle_type: mapTypeToEnum(formData.type_mc),
-      seller_type: "private",
-      city: city,                    // ← Now uses parsed city
-      address: fullAddress,          // ← Now uses full location string
-      category_id: categoryId,
-      seller_id: user?.id || 1, // Use real user ID
-      netbill: false,
-      images: imagePreviews.map((preview, index) => ({
-        image_url: preview,
-        is_primary: index === 0,
-        alt_text: `${formData.brand} ${formData.model}`
-      }))
-    };
+      // Debug what we're sending
+      console.log("🔍 DEBUG - Form processing:");
+      console.log("  location field:", formData.location);
+      console.log("  postal_code field:", formData.postal_code);
+      console.log("  parsed city:", city);
+      console.log("  parsed country:", country);
+      console.log("  full address for backend:", fullAddress);
 
-    console.log("🚀 Sending motorcycle data to backend:");
-    console.log("  city:", motorcycleData.city);
-    console.log("  address:", motorcycleData.address);
+      // Prepare data for backend
+      const motorcycleData = {
+        title: formData.brand && formData.model ? `${formData.brand} ${formData.model} ${formData.model_year}` : `${category} for sale`,
+        description: formData.description || `${formData.brand} ${formData.model} from ${formData.model_year}`,
+        brand: formData.brand || "Unknown",
+        model: formData.model || "Unknown", 
+        year: parseInt(formData.model_year) || new Date().getFullYear(),
+        engine_size: parseInt(formData.displacement_ccm) || null,
+        mileage: parseInt(formData.mileage) || null,
+        price: parseFloat(formData.selling_price_nok) || 0,
+        condition: mapConditionToEnum(formData.condition),
+        motorcycle_type: mapTypeToEnum(formData.type_mc),
+        seller_type: "private",
+        city: city,                    // ← Now uses parsed city
+        address: fullAddress,          // ← Now uses full location string
+        category_id: categoryId,
+        seller_id: user?.id || 1, // Use real user ID
+        netbill: false,
+        images: imagePreviews.map((preview, index) => ({
+          image_url: preview,
+          is_primary: index === 0,
+          alt_text: `${formData.brand} ${formData.model}`
+        }))
+      };
 
-    const result = await motorcycleService.createMotorcycle(motorcycleData);
-    
-    alert(`Motorcycle ad posted successfully in ${category}!`);
-    
-    // Redirect to the specific category page to see the new motorcycle
-    router.push(`/routes/motor-cycle/category?category=${encodeURIComponent(category)}`);
+      console.log("🚀 Sending motorcycle data to backend:");
+      console.log("  city:", motorcycleData.city);
+      console.log("  address:", motorcycleData.address);
 
-  } catch (error) {
-    console.error("❌ Error creating motorcycle ad:", error);
-    
-    let errorMessage = "Failed to post ad. Please try again.";
-    if (error.response && error.response.data && error.response.data.detail) {
-      errorMessage = `Error: ${error.response.data.detail}`;
+      const result = await motorcycleService.createMotorcycle(motorcycleData);
+      
+      alert(`Motorcycle ad posted successfully in ${category}!`);
+      
+      // Redirect to the specific category page to see the new motorcycle
+      router.push(`/routes/motor-cycle/category?category=${encodeURIComponent(category)}`);
+
+    } catch (error) {
+      console.error("❌ Error creating motorcycle ad:", error);
+      
+      let errorMessage = "Failed to post ad. Please try again.";
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = `Error: ${error.response.data.detail}`;
+      }
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    alert(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
-// Add these helper functions to map form values to enum values
-const mapConditionToEnum = (condition) => {
-  const conditionMap = {
-    "Used": "good",
-    "New": "new",
-    "Like New": "like_new",
-    "Excellent": "excellent",
-    "Good": "good",
-    "Fair": "fair",
-    "Poor": "poor"
   };
-  return conditionMap[condition] || "good";
-};
 
-const mapTypeToEnum = (type) => {
-  const typeMap = {
-    "Adventure": "adventure",
-    "Cruiser": "cruiser",
-    "Sport": "sports",
-    "Touring": "touring",
-    "Naked": "nakne",
-    "Scooter": "scooter",
-    "Off-road": "adventure",
-    "Enduro": "adventure"
+  const getUserRegistrationYear = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.created_at) {
+          // Extract year from the created_at timestamp
+          const registrationYear = new Date(user.created_at).getFullYear();
+          return registrationYear;
+        }
+      }
+      // Fallback to current year if no data found
+      return new Date().getFullYear();
+    } catch (error) {
+      console.error('Error getting user registration year:', error);
+      // Fallback to current year if error occurs
+      return new Date().getFullYear();
+    }
   };
-  return typeMap[type] || "adventure";
-};
+
+  // Add these helper functions to map form values to enum values
+  const mapConditionToEnum = (condition) => {
+    const conditionMap = {
+      "Used": "good",
+      "New": "new",
+      "Like New": "like_new",
+      "Excellent": "excellent",
+      "Good": "good",
+      "Fair": "fair",
+      "Poor": "poor"
+    };
+    return conditionMap[condition] || "good";
+  };
+
+  const mapTypeToEnum = (type) => {
+    const typeMap = {
+      "Adventure": "adventure",
+      "Cruiser": "cruiser",
+      "Sport": "sports",
+      "Touring": "touring",
+      "Naked": "nakne",
+      "Scooter": "scooter",
+      "Off-road": "adventure",
+      "Enduro": "adventure"
+    };
+    return typeMap[type] || "adventure";
+  };
+
   // Calculate total searchable price
   const calculateTotalPrice = () => {
     const reRegFee = parseFloat(formData.re_registration_fee_nok) || 0;
@@ -265,7 +292,7 @@ const mapTypeToEnum = (type) => {
               name="registration_number"
               value={formData.registration_number}
               onChange={handleInputChange}
-              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
             />
             <p className="text-xs text-blue-600 mt-1">Registration number or chassis number must be filled in.</p>
           </div>
@@ -279,7 +306,7 @@ const mapTypeToEnum = (type) => {
               name="chassis_number"
               value={formData.chassis_number}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
             />
             <p className="text-xs text-blue-600 mt-1">
               It is listed on the first page of the vehicle registration document. You can also find it at vegvesen.no.
@@ -293,7 +320,7 @@ const mapTypeToEnum = (type) => {
               name="brand"
               value={formData.brand}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
               required
             />
           </div>
@@ -307,7 +334,7 @@ const mapTypeToEnum = (type) => {
               name="model"
               value={formData.model}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
             />
           </div>
 
@@ -317,11 +344,11 @@ const mapTypeToEnum = (type) => {
               name="type_mc"
               value={formData.type_mc}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={selectStyles}
             >
-              <option value="">Select type</option>
+              <option value="" className="text-gray-500">Select type</option>
               {mcTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type} value={type} className="text-black">{type}</option>
               ))}
             </select>
           </div>
@@ -333,7 +360,7 @@ const mapTypeToEnum = (type) => {
               name="model_year"
               value={formData.model_year}
               onChange={handleInputChange}
-              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               min="1900"
               max={new Date().getFullYear() + 1}
             />
@@ -363,11 +390,11 @@ const mapTypeToEnum = (type) => {
               name="fuel"
               value={formData.fuel}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={selectStyles}
             >
-              <option value="">Select fuel type</option>
+              <option value="" className="text-gray-500">Select fuel type</option>
               {fuelTypes.map(fuel => (
-                <option key={fuel} value={fuel}>{fuel}</option>
+                <option key={fuel} value={fuel} className="text-black">{fuel}</option>
               ))}
             </select>
           </div>
@@ -382,7 +409,7 @@ const mapTypeToEnum = (type) => {
                 name="power_hp"
                 value={formData.power_hp}
                 onChange={handleInputChange}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">hp</span>
             </div>
@@ -401,7 +428,7 @@ const mapTypeToEnum = (type) => {
                 name="displacement_ccm"
                 value={formData.displacement_ccm}
                 onChange={handleInputChange}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">cc</span>
             </div>
@@ -431,7 +458,7 @@ const mapTypeToEnum = (type) => {
                 name="weight_kg"
                 value={formData.weight_kg}
                 onChange={handleInputChange}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">kg</span>
             </div>
@@ -446,7 +473,7 @@ const mapTypeToEnum = (type) => {
               name="color"
               value={formData.color}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
             />
           </div>
         </div>
@@ -469,7 +496,7 @@ const mapTypeToEnum = (type) => {
                   onChange={(e) => handleRadioChange("condition", e.target.value)}
                   className="mr-2"
                 />
-                Used
+                <span className="text-black">Used</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -480,7 +507,7 @@ const mapTypeToEnum = (type) => {
                   onChange={(e) => handleRadioChange("condition", e.target.value)}
                   className="mr-2"
                 />
-                New
+                <span className="text-black">New</span>
               </label>
             </div>
           </div>
@@ -495,7 +522,7 @@ const mapTypeToEnum = (type) => {
                 name="mileage"
                 value={formData.mileage}
                 onChange={handleInputChange}
-                className="w-48 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-48 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">km</span>
             </div>
@@ -510,7 +537,7 @@ const mapTypeToEnum = (type) => {
               name="number_of_owners"
               value={formData.number_of_owners}
               onChange={handleInputChange}
-              className="w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
             />
           </div>
 
@@ -522,11 +549,11 @@ const mapTypeToEnum = (type) => {
               name="has_condition_report"
               value={formData.has_condition_report}
               onChange={handleInputChange}
-              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
             >
-              <option value="">Select option</option>
+              <option value="" className="text-gray-500">Select option</option>
               {conditionReports.map(option => (
-                <option key={option} value={option}>{option}</option>
+                <option key={option} value={option} className="text-black">{option}</option>
               ))}
             </select>
           </div>
@@ -552,11 +579,11 @@ const mapTypeToEnum = (type) => {
               name="warranty_type"
               value={formData.warranty_type}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={selectStyles}
             >
-              <option value="">Select warranty type</option>
+              <option value="" className="text-gray-500">Select warranty type</option>
               {warrantyTypes.map(warranty => (
-                <option key={warranty} value={warranty}>{warranty}</option>
+                <option key={warranty} value={warranty} className="text-black">{warranty}</option>
               ))}
             </select>
           </div>
@@ -608,7 +635,7 @@ const mapTypeToEnum = (type) => {
               name="video"
               value={formData.video}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
               placeholder="Link to video on YouTube or Vimeo"
             />
             <p className="text-xs text-gray-600 mt-1">Link to video on YouTube or Vimeo</p>
@@ -620,15 +647,15 @@ const mapTypeToEnum = (type) => {
             </label>
             <div className="border border-gray-300 rounded-md">
               <div className="border-b border-gray-300 px-3 py-2 bg-gray-50">
-                <button type="button" className="mr-4 font-bold">B</button>
-                <button type="button">≡</button>
+                <button type="button" className="mr-4 font-bold text-black">B</button>
+                <button type="button" className="text-black">≡</button>
               </div>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={8}
-                className="w-full px-3 py-2 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className={textareaStyles}
                 placeholder="Describe your motorcycle..."
               />
             </div>
@@ -689,7 +716,7 @@ const mapTypeToEnum = (type) => {
                 name="re_registration_fee_nok"
                 value={formData.re_registration_fee_nok}
                 onChange={handleInputChange}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">kr</span>
             </div>
@@ -703,7 +730,7 @@ const mapTypeToEnum = (type) => {
                 name="selling_price_nok"
                 value={formData.selling_price_nok}
                 onChange={handleInputChange}
-                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                 required
               />
               <span className="absolute right-3 top-2 text-gray-500 text-sm">kr</span>
@@ -712,12 +739,11 @@ const mapTypeToEnum = (type) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Total searchable price</label>
-            <p className="text-lg font-medium">{calculateTotalPrice()} kr</p>
+            <p className="text-lg font-medium text-black">{calculateTotalPrice()} kr</p>
           </div>
         </div>
 
-           {/* Contact information */}
-       {/* Contact information */}
+        {/* Contact information */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Contact information</h2>
           
@@ -728,7 +754,7 @@ const mapTypeToEnum = (type) => {
               name="location"
               value={formData.location}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputStyles}
               placeholder="e.g., Islamabad, Pakistan or Oslo, Norway"
               required
             />
@@ -742,19 +768,18 @@ const mapTypeToEnum = (type) => {
               name="postal_code"
               value={formData.postal_code}
               onChange={handleInputChange}
-              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
             />
           </div>
           
-
           <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                 <span className="text-blue-600 font-bold">K</span>
               </div>
               <div>
-                <p className="font-medium text-blue-600">kamjadkhan</p>
-                <p className="text-sm text-gray-600">On FINN since 2025</p>
+                <div className="text-blue-600 font-medium">{localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).username : 'User'}</div>
+                <div className="text-gray-600">On SELGO since {getUserRegistrationYear()}</div>
               </div>
             </div>
           </div>

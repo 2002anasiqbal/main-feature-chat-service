@@ -146,7 +146,8 @@ class MotorcycleService:
         db: Session, 
         filters: schemas.MotorcycleSearchFilters,
         page: int = 1,
-        per_page: int = 20
+        per_page: int = 20,
+        motorcycle_types: List[str] = None  # Add this parameter
     ) -> tuple[List[models.Motorcycle], int]:
         
         # Start with base query
@@ -155,11 +156,17 @@ class MotorcycleService:
         # Apply filters (existing logic)
         if filters.category_id:
             query = query.filter(models.Motorcycle.category_id == filters.category_id)
-            
-        if filters.motorcycle_type:
+        
+        # Handle multiple motorcycle types
+        if motorcycle_types and len(motorcycle_types) > 0:
+            print(f"🔍 Filtering by motorcycle types: {motorcycle_types}")
+            # Use SQL IN clause for multiple types
+            query = query.filter(models.Motorcycle.motorcycle_type.in_(motorcycle_types))
+        elif filters.motorcycle_type:
+            # Fallback to single type filter
             motorcycle_type_value = filters.motorcycle_type.value if hasattr(filters.motorcycle_type, 'value') else filters.motorcycle_type
             query = query.filter(models.Motorcycle.motorcycle_type == motorcycle_type_value)
-            
+        
         if filters.brand:
             query = query.filter(models.Motorcycle.brand.ilike(f"%{filters.brand}%"))
             
@@ -405,3 +412,92 @@ class GeocodeService:
         except Exception as e:
             print(f"❌ Geocoding error for '{address}': {e}")
             return None
+        
+
+class UserFavoriteMotorcycleRepository:
+    @staticmethod
+    def add_favorite(db: Session, user_id: int, motorcycle_id: int) -> Optional[models.UserFavoriteMotorcycle]:
+        # Check if already favorited
+        existing = db.query(models.UserFavoriteMotorcycle).filter(
+            models.UserFavoriteMotorcycle.user_id == user_id,
+            models.UserFavoriteMotorcycle.motorcycle_id == motorcycle_id
+        ).first()
+        
+        if existing:
+            return existing
+        
+        # Create new favorite
+        favorite = models.UserFavoriteMotorcycle(user_id=user_id, motorcycle_id=motorcycle_id)
+        db.add(favorite)
+        db.commit()
+        db.refresh(favorite)
+        return favorite
+    
+    @staticmethod
+    def remove_favorite(db: Session, user_id: int, motorcycle_id: int) -> bool:
+        favorite = db.query(models.UserFavoriteMotorcycle).filter(
+            models.UserFavoriteMotorcycle.user_id == user_id,
+            models.UserFavoriteMotorcycle.motorcycle_id == motorcycle_id
+        ).first()
+        
+        if favorite:
+            db.delete(favorite)
+            db.commit()
+            return True
+        return False
+    
+    @staticmethod
+    def is_favorite(db: Session, user_id: int, motorcycle_id: int) -> bool:
+        return db.query(models.UserFavoriteMotorcycle).filter(
+            models.UserFavoriteMotorcycle.user_id == user_id,
+            models.UserFavoriteMotorcycle.motorcycle_id == motorcycle_id
+        ).first() is not None
+    
+    @staticmethod
+    def get_user_favorites(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[models.UserFavoriteMotorcycle]:
+        return db.query(models.UserFavoriteMotorcycle).options(
+            joinedload(models.UserFavoriteMotorcycle.motorcycle).joinedload(models.Motorcycle.images)
+        ).filter(
+            models.UserFavoriteMotorcycle.user_id == user_id
+        ).order_by(
+            models.UserFavoriteMotorcycle.created_at.desc()
+        ).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_favorites_count(db: Session, user_id: int) -> int:
+        return db.query(models.UserFavoriteMotorcycle).filter(
+            models.UserFavoriteMotorcycle.user_id == user_id
+        ).count()
+
+class UserFavoriteMotorcycleService:
+    @staticmethod
+    def toggle_favorite(db: Session, user_id: int, motorcycle_id: int) -> tuple[bool, str]:
+        """Toggle favorite status and return (is_favorite, message)"""
+        # Check if motorcycle exists
+        motorcycle = db.query(models.Motorcycle).filter(models.Motorcycle.id == motorcycle_id).first()
+        if not motorcycle:
+            raise ValueError("Motorcycle not found")
+        
+        # Check current favorite status
+        is_currently_favorite = UserFavoriteMotorcycleRepository.is_favorite(db, user_id, motorcycle_id)
+        
+        if is_currently_favorite:
+            # Remove from favorites
+            UserFavoriteMotorcycleRepository.remove_favorite(db, user_id, motorcycle_id)
+            return False, "Removed from favorites"
+        else:
+            # Add to favorites
+            UserFavoriteMotorcycleRepository.add_favorite(db, user_id, motorcycle_id)
+            return True, "Added to favorites"
+    
+    @staticmethod
+    def get_user_favorites(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[models.UserFavoriteMotorcycle]:
+        return UserFavoriteMotorcycleRepository.get_user_favorites(db, user_id, skip, limit)
+    
+    @staticmethod
+    def get_favorites_count(db: Session, user_id: int) -> int:
+        return UserFavoriteMotorcycleRepository.get_favorites_count(db, user_id)
+    
+    @staticmethod
+    def is_favorite(db: Session, user_id: int, motorcycle_id: int) -> bool:
+        return UserFavoriteMotorcycleRepository.is_favorite(db, user_id, motorcycle_id)

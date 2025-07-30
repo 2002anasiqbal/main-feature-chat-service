@@ -191,3 +191,30 @@ class PaginatedResponse(BaseModel):
     pages: int
     has_next: bool
     has_prev: bool
+    
+class UserFavoriteMotorcycleCreate(BaseModel):
+    motorcycle_id: int
+
+class FavoriteMotorcycleInfo(BaseModel):
+    id: int
+    title: str
+    brand: str
+    model: str
+    year: int
+    price: Decimal
+    city: Optional[str] = None
+    motorcycle_type: MotorcycleType
+    condition: ConditionEnum
+    created_at: str  # Use string for JSON compatibility
+    primary_image: Optional[str] = None
+
+class UserFavoriteMotorcycleResponse(BaseModel):
+    id: int
+    user_id: int
+    motorcycle_id: int
+    created_at: str  # Use string for JSON compatibility
+    motorcycle: FavoriteMotorcycleInfo
+
+class FavoriteToggleResponse(BaseModel):
+    is_favorite: bool
+    message: str

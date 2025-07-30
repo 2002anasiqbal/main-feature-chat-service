@@ -1,5 +1,4 @@
 // selgo-frontend/src/app/routes/motor-cycle/create-ad/page.jsx
-// FIXED: Use correct category name with "6000" suffix
 
 "use client";
 import { useSearchParams } from "next/navigation";

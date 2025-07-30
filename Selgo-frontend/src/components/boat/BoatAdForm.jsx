@@ -15,6 +15,7 @@ export default function BoatAdForm({ subcategory }) {
   const [formData, setFormData] = useState({
     title: "",
     category_id: "",
+    boat_type: "",
     price: "",
     year: "",
     make: "", // brand
@@ -46,52 +47,57 @@ export default function BoatAdForm({ subcategory }) {
     ad_type: subcategory === "boats-for-rent" ? "for_rent" : "for_sale"
   });
 
+  // Common input styling - same as motorcycle form
+  const inputStyles = "w-full p-2 border border-gray-300 rounded-md text-black bg-white placeholder-gray-500";
+  const selectStyles = "w-full p-2 border border-gray-300 rounded-md appearance-none text-black bg-white";
+  const textareaStyles = "w-full p-2 min-h-[150px] border-0 focus:ring-0 resize-y text-black bg-white placeholder-gray-500";
+
   // Fetch categories and features when component mounts
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const categoriesData = await boatService.getCategories();
-      const featuresData = await boatService.getFeatures();
-      
-      setCategories(categoriesData);
-      setFeatures(featuresData);
-      
-      // Define explicit mapping from URL slug to category ID
-      const subcategoryToCategoryIdMap = {
-        "buy-boats": 1,
-        "buy-boats-abroad": 2,
-        "boats-in-norway": 3,
-        "vans-abroad": 4,
-        "boats-parts": 5,
-        "boats": 6,
-        "boats-for-rent": 7,
-        "boats-for-sale": 8
-      };
-      
-      // Log available subcategory
-      console.log(`Creating ad for subcategory: ${subcategory}`);
-      
-      // Set category_id based on subcategory from URL
-      if (subcategory && subcategoryToCategoryIdMap[subcategory]) {
-        const categoryId = subcategoryToCategoryIdMap[subcategory];
-        console.log(`Setting category_id to ${categoryId}`);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const categoriesData = await boatService.getCategories();
+        const featuresData = await boatService.getFeatures();
         
-        setFormData(prev => ({
-          ...prev,
-          category_id: categoryId,
-          // Set ad_type based on subcategory
-          ad_type: subcategory === "boats-for-rent" ? "for_rent" : "for_sale"
-        }));
-      } else {
-        console.warn(`No mapping found for subcategory: ${subcategory}`);
+        setCategories(categoriesData);
+        setFeatures(featuresData);
+        
+        // Define explicit mapping from URL slug to category ID
+        const subcategoryToCategoryIdMap = {
+          "buy-boats": 1,
+          "buy-boats-abroad": 2,
+          "boats-in-norway": 3,
+          "vans-abroad": 4,
+          "boats-parts": 5,
+          "boats": 6,
+          "boats-for-rent": 7,
+          "boats-for-sale": 8
+        };
+        
+        // Log available subcategory
+        console.log(`Creating ad for subcategory: ${subcategory}`);
+        
+        // Set category_id based on subcategory from URL
+        if (subcategory && subcategoryToCategoryIdMap[subcategory]) {
+          const categoryId = subcategoryToCategoryIdMap[subcategory];
+          console.log(`Setting category_id to ${categoryId}`);
+          
+          setFormData(prev => ({
+            ...prev,
+            category_id: categoryId,
+            // Set ad_type based on subcategory
+            ad_type: subcategory === "boats-for-rent" ? "for_rent" : "for_sale"
+          }));
+        } else {
+          console.warn(`No mapping found for subcategory: ${subcategory}`);
+        }
+      } catch (error) {
+        console.error("Error fetching form data:", error);
       }
-    } catch (error) {
-      console.error("Error fetching form data:", error);
-    }
-  };
-  
-  fetchData();
-}, [subcategory]);
+    };
+    
+    fetchData();
+  }, [subcategory]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -115,105 +121,131 @@ useEffect(() => {
     setFormData({ ...formData, images: [...formData.images, ...files] });
   };
 
-const handleLocationChange = (e) => {
-  const { value } = e.target;
-  setFormData({ 
-    ...formData, 
-    location_abroad: value === "abroad",
-    // Don't reset location_name when changing country selection
-  });
-   // Set default country based on selection
-  if (value === "abroad") {
-    setCountry("");
-  } else {
-    setCountry("Norge");
-  }
-};
-  
-const handleLocationNameChange = (e) => {
-  const value = e.target.value;
-  setFormData({
-    ...formData,
-    location_name: value
-  });
-  setLocationName(value);
-  
-  // If location is abroad and has comma, assume the format is "City, Country"
-  if (formData.location_abroad && value.includes(',')) {
-    const parts = value.split(',');
-    if (parts.length > 1) {
-      setCountry(parts[parts.length - 1].trim());
+  const handleLocationChange = (e) => {
+    const { value } = e.target;
+    setFormData({ 
+      ...formData, 
+      location_abroad: value === "abroad",
+      // Don't reset location_name when changing country selection
+    });
+     // Set default country based on selection
+    if (value === "abroad") {
+      setCountry("");
+    } else {
+      setCountry("Norge");
     }
-  }
-};
+  };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    // Format data for API
-    const adData = {
-      title: formData.title,
-      description: formData.description,
-      price: parseFloat(formData.price) || 0,
-      category_id: parseInt(formData.category_id),
-      condition: "good", // Default to good condition
-      year: parseInt(formData.year) || null,
-      make: formData.make,
-      model: formData.model,
-      length: parseFloat(formData.length) || null,
-      beam: parseFloat(formData.beam) || null,
-      draft: parseFloat(formData.draft) || null,
-      fuel_type: formData.fuel_type,
-      hull_material: formData.hull_material,
-      engine_make: formData.engine_make,
-      engine_model: formData.engine_model,
-      engine_hours: 0, // Default to 0
-      engine_power: parseInt(formData.engine_power) || null,
-      location_name: formData.location_name,
-      ad_type: formData.ad_type,
-      features: [], // Empty features array since we removed that section
-      status: "active"
-    };
+  const getUserRegistrationYear = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.created_at) {
+          // Extract year from the created_at timestamp
+          const registrationYear = new Date(user.created_at).getFullYear();
+          return registrationYear;
+        }
+      }
+      // Fallback to current year if no data found
+      return new Date().getFullYear();
+    } catch (error) {
+      console.error('Error getting user registration year:', error);
+      // Fallback to current year if error occurs
+      return new Date().getFullYear();
+    }
+  };
     
-    // Handle image uploads first
-    let imageUrls = [];
-    if (formData.images.length > 0) {
-      for (const imageFile of formData.images) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        
-        const uploadResponse = await boatService.uploadImage(formData);
-        imageUrls.push({
-          image_url: uploadResponse.url,
-          is_primary: imageUrls.length === 0 // First image is primary
-        });
+  const handleLocationNameChange = (e) => {
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      location_name: value
+    });
+    setLocationName(value);
+    
+    // If location is abroad and has comma, assume the format is "City, Country"
+    if (formData.location_abroad && value.includes(',')) {
+      const parts = value.split(',');
+      if (parts.length > 1) {
+        setCountry(parts[parts.length - 1].trim());
       }
     }
-    
-    // Add images to ad data
-    adData.images = imageUrls;
-    
-    // Create the boat ad
-    console.log("Sending ad data to API:", adData);
-    const response = await boatService.createBoat(adData);
-    console.log("Boat ad created successfully:", response);
-    // Mark the boat as newly created for frontend prioritization
-    if (response.id) {
-      boatService.markNewlyCreated(response.id);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+     // ADD THIS DEBUG LOG
+    console.log("🐛 Form data before submission:", formData);
+    console.log("🐛 boat_type value:", formData.boat_type);
+
+    try {
+      // Format data for API
+  const adData = {
+    title: formData.title,
+    description: formData.description,
+    price: parseFloat(formData.price) || 0,
+    category_id: parseInt(formData.category_id),
+    boat_type: formData.boat_type, // ADD THIS LINE
+    condition: "good",
+    year: parseInt(formData.year) || null,
+    make: formData.make,
+    model: formData.model,
+    length: parseFloat(formData.length) || null,
+    beam: parseFloat(formData.beam) || null,
+    draft: parseFloat(formData.draft) || null,
+    fuel_type: formData.fuel_type,
+    hull_material: formData.hull_material,
+    engine_make: formData.engine_make,
+    engine_model: formData.engine_model,
+    engine_hours: 0,
+    engine_power: parseInt(formData.engine_power) || null,
+    location_name: formData.location_name,
+    ad_type: formData.ad_type,
+    features: [],
+    status: "active"
+  };
+      // ADD THIS DEBUG LOG
+      console.log("🐛 API data being sent:", adData);
+      console.log("🐛 boat_type in API data:", adData.boat_type);
+      // Handle image uploads first
+      let imageUrls = [];
+      if (formData.images.length > 0) {
+        for (const imageFile of formData.images) {
+          const formData = new FormData();
+          formData.append("file", imageFile);
+          
+          const uploadResponse = await boatService.uploadImage(formData);
+          imageUrls.push({
+            image_url: uploadResponse.url,
+            is_primary: imageUrls.length === 0 // First image is primary
+          });
+        }
+      }
+      
+      // Add images to ad data
+      adData.images = imageUrls;
+      
+      // Create the boat ad
+      console.log("Sending ad data to API:", adData);
+      const response = await boatService.createBoat(adData);
+      console.log("Boat ad created successfully:", response);
+      // Mark the boat as newly created for frontend prioritization
+      if (response.id) {
+        boatService.markNewlyCreated(response.id);
+      }
+      alert("Boat ad created successfully! Redirecting to home page...");
+      
+      // Force a hard refresh when redirecting to home page
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error creating boat ad:", error);
+      alert("Failed to create ad. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    alert("Boat ad created successfully! Redirecting to home page...");
-    
-    // Force a hard refresh when redirecting to home page
-    window.location.href = "/";
-  } catch (error) {
-    console.error("Error creating boat ad:", error);
-    alert("Failed to create ad. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handlePreview = () => {
     setPreviewVisible(true);
@@ -229,7 +261,7 @@ const handleSubmit = async (e) => {
 
   return (
     <div className="w-full bg-white pb-12">
-      <h1 className="text-3xl font-bold mb-6">{adTypeLabel}</h1>
+      <h1 className="text-3xl font-bold mb-6 text-black">{adTypeLabel}</h1>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Ad Headline */}
@@ -240,39 +272,40 @@ const handleSubmit = async (e) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className={inputStyles}
             required
           />
         </div>
         
         {/* Type of Boat */}
-    <div className="space-y-2">
-        <label className="block text-gray-700 font-medium">Type of boat</label>
-        <select
-            name="boat_type"
-            value={formData.boat_type || ""}
-            onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md appearance-none"
-        >
-            <option value="">Select boat type</option>
-            <option value="motor_boat">Motor Boat</option>
-            <option value="sail_boat">Sail Boat</option>
-            <option value="fishing_boat">Fishing Boat</option>
-            <option value="yacht">Yacht</option>
-            <option value="jet_ski">Jet Ski</option>
-            <option value="kayak">Kayak</option>
-            <option value="canoe">Canoe</option>
-            <option value="pontoon">Pontoon</option>
-            <option value="inflatable">Inflatable Boat</option>
-            <option value="dinghy">Dinghy</option>
-            <option value="other">Other</option>
-        </select>
-    </div>
+        <div className="space-y-2">
+            <label className="block text-gray-700 font-medium">Type of boat</label>
+            <select
+                name="boat_type"
+                value={formData.boat_type || ""}
+                onChange={handleInputChange}
+                className={selectStyles}
+            >
+                <option value="" className="text-gray-500">Select boat type</option>
+                <option value="motor_boat" className="text-black">Motor Boat</option>
+                <option value="sail_boat" className="text-black">Sail Boat</option>
+                <option value="fishing_boat" className="text-black">Fishing Boat</option>
+                <option value="yacht" className="text-black">Yacht</option>
+                <option value="jet_ski" className="text-black">Jet Ski</option>
+                <option value="kayak" className="text-black">Kayak</option>
+                <option value="canoe" className="text-black">Canoe</option>
+                <option value="pontoon" className="text-black">Pontoon</option>
+                <option value="inflatable" className="text-black">Inflatable Boat</option>
+                <option value="dinghy" className="text-black">Dinghy</option>
+                <option value="other" className="text-black">Other</option>
+            </select>
+        </div>
         <input
-  type="hidden"
-  name="category_id"
-  value={formData.category_id}
-/>
+          type="hidden"
+          name="category_id"
+          value={formData.category_id}
+        />
+        
         {/* Registration Number */}
         <div className="space-y-2">
           <label className="block text-gray-700 font-medium">
@@ -283,7 +316,7 @@ const handleSubmit = async (e) => {
             name="registration_number"
             value={formData.registration_number}
             onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className={inputStyles}
           />
           <p className="text-sm text-gray-600">
             The boat's characteristics in the Small Boat Register or the Ship Register
@@ -298,7 +331,7 @@ const handleSubmit = async (e) => {
             name="year"
             value={formData.year}
             onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className={inputStyles}
             required
           />
         </div>
@@ -311,7 +344,7 @@ const handleSubmit = async (e) => {
             name="make"
             value={formData.make}
             onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className={inputStyles}
             required
           />
         </div>
@@ -326,7 +359,7 @@ const handleSubmit = async (e) => {
             name="model"
             value={formData.model}
             onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            className={inputStyles}
           />
         </div>
         
@@ -343,7 +376,7 @@ const handleSubmit = async (e) => {
                 onChange={handleLocationChange}
                 className="mr-2"
               />
-              Norway
+              <span className="text-black">Norway</span>
             </label>
             <label className="flex items-center">
               <input
@@ -354,7 +387,7 @@ const handleSubmit = async (e) => {
                 onChange={handleLocationChange}
                 className="mr-2"
               />
-              Abroad
+              <span className="text-black">Abroad</span>
             </label>
           </div>
           
@@ -365,7 +398,7 @@ const handleSubmit = async (e) => {
                   name="location_name"
                   value={formData.location_name}
                   onChange={handleLocationNameChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className={inputStyles}
                   placeholder={formData.location_abroad ? "City, Country" : "City, Region"}
                   required
                 />
@@ -384,7 +417,7 @@ const handleSubmit = async (e) => {
               onChange={handleInputChange}
               className="mr-2"
             />
-            <label>Engine included in the sale</label>
+            <label className="text-black">Engine included in the sale</label>
           </div>
           
           {formData.engine_included && (
@@ -398,7 +431,7 @@ const handleSubmit = async (e) => {
                   name="engine_make"
                   value={formData.engine_make}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className={inputStyles}
                 />
               </div>
               
@@ -410,13 +443,13 @@ const handleSubmit = async (e) => {
                   name="engine_type"
                   value={formData.engine_type}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md appearance-none"
+                  className={selectStyles}
                 >
-                  <option value="">Select engine type</option>
-                  <option value="outboard">Outboard</option>
-                  <option value="inboard">Inboard</option>
-                  <option value="electric">Electric</option>
-                  <option value="other">Other</option>
+                  <option value="" className="text-gray-500">Select engine type</option>
+                  <option value="outboard" className="text-black">Outboard</option>
+                  <option value="inboard" className="text-black">Inboard</option>
+                  <option value="electric" className="text-black">Electric</option>
+                  <option value="other" className="text-black">Other</option>
                 </select>
               </div>
               
@@ -430,7 +463,7 @@ const handleSubmit = async (e) => {
                     name="engine_power"
                     value={formData.engine_power}
                     onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md pr-12"
+                    className="w-full p-2 border border-gray-300 rounded-md pr-12 text-black bg-white"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">hp</span>
                 </div>
@@ -444,14 +477,14 @@ const handleSubmit = async (e) => {
                   name="fuel_type"
                   value={formData.fuel_type}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md appearance-none"
+                  className={selectStyles}
                 >
-                  <option value="">Select fuel type</option>
-                  <option value="gasoline">Gasoline</option>
-                  <option value="diesel">Diesel</option>
-                  <option value="electric">Electric</option>
-                  <option value="hybrid">Hybrid</option>
-                  <option value="other">Other</option>
+                  <option value="" className="text-gray-500">Select fuel type</option>
+                  <option value="gasoline" className="text-black">Gasoline</option>
+                  <option value="diesel" className="text-black">Diesel</option>
+                  <option value="electric" className="text-black">Electric</option>
+                  <option value="hybrid" className="text-black">Hybrid</option>
+                  <option value="other" className="text-black">Other</option>
                 </select>
               </div>
               
@@ -465,7 +498,7 @@ const handleSubmit = async (e) => {
                     name="top_speed"
                     value={formData.top_speed}
                     onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md pr-16"
+                    className="w-full p-2 border border-gray-300 rounded-md pr-16 text-black bg-white"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">knot</span>
                 </div>
@@ -486,7 +519,7 @@ const handleSubmit = async (e) => {
                 name="length"
                 value={formData.length}
                 onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md pr-16"
+                className="w-full p-2 border border-gray-300 rounded-md pr-16 text-black bg-white"
                 required
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">foot</span>
@@ -503,7 +536,7 @@ const handleSubmit = async (e) => {
                 name="beam"
                 value={formData.beam}
                 onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md pr-12"
+                className="w-full p-2 border border-gray-300 rounded-md pr-12 text-black bg-white"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">cm</span>
             </div>
@@ -519,7 +552,7 @@ const handleSubmit = async (e) => {
                 name="draft"
                 value={formData.draft}
                 onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md pr-12"
+                className="w-full p-2 border border-gray-300 rounded-md pr-12 text-black bg-white"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">cm</span>
             </div>
@@ -535,7 +568,7 @@ const handleSubmit = async (e) => {
                 name="weight"
                 value={formData.weight}
                 onChange={handleInputChange}
-                className="w-full p-2 border border-gray-300 rounded-md pr-12"
+                className="w-full p-2 border border-gray-300 rounded-md pr-12 text-black bg-white"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">kg</span>
             </div>
@@ -549,15 +582,15 @@ const handleSubmit = async (e) => {
               name="hull_material"
               value={formData.hull_material}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md appearance-none"
+              className={selectStyles}
             >
-              <option value="">Select material</option>
-              <option value="fiberglass">Fiberglass</option>
-              <option value="aluminum">Aluminum</option>
-              <option value="wood">Wood</option>
-              <option value="steel">Steel</option>
-              <option value="carbon_fiber">Carbon Fiber</option>
-              <option value="other">Other</option>
+              <option value="" className="text-gray-500">Select material</option>
+              <option value="fiberglass" className="text-black">Fiberglass</option>
+              <option value="aluminum" className="text-black">Aluminum</option>
+              <option value="wood" className="text-black">Wood</option>
+              <option value="steel" className="text-black">Steel</option>
+              <option value="carbon_fiber" className="text-black">Carbon Fiber</option>
+              <option value="other" className="text-black">Other</option>
             </select>
           </div>
           
@@ -570,7 +603,7 @@ const handleSubmit = async (e) => {
               name="color"
               value={formData.color}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className={inputStyles}
             />
           </div>
           
@@ -583,7 +616,7 @@ const handleSubmit = async (e) => {
               name="seats"
               value={formData.seats}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className={inputStyles}
             />
           </div>
           
@@ -596,7 +629,7 @@ const handleSubmit = async (e) => {
               name="sleeping_places"
               value={formData.sleeping_places}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className={inputStyles}
             />
           </div>
           
@@ -609,7 +642,7 @@ const handleSubmit = async (e) => {
               name="light_number"
               value={formData.light_number}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className={inputStyles}
             />
             <p className="text-sm text-gray-600">
               The number describes how fast the sailboat is, for example 1.15. The measurement certificate is issued by Norlys.
@@ -627,8 +660,8 @@ const handleSubmit = async (e) => {
             </label>
             <div className="border border-gray-300 rounded-md overflow-hidden">
               <div className="flex bg-gray-100 p-2 border-b">
-                <button type="button" className="px-2 font-bold">B</button>
-                <button type="button" className="px-2">
+                <button type="button" className="px-2 font-bold text-black">B</button>
+                <button type="button" className="px-2 text-black">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="8" y1="6" x2="21" y2="6"></line>
                     <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -643,12 +676,10 @@ const handleSubmit = async (e) => {
                 name="equipment"
                 value={formData.equipment}
                 onChange={handleInputChange}
-                className="w-full p-2 min-h-[150px] border-0 focus:ring-0 resize-y"
+                className={textareaStyles}
               ></textarea>
             </div>
           </div>
-          
-       
         </div>
         
         {/* Pictures, Video, and Description */}
@@ -662,7 +693,7 @@ const handleSubmit = async (e) => {
             <button
               type="button"
               onClick={() => document.getElementById('image-upload').click()}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition text-black"
             >
               Add photos
             </button>
@@ -709,7 +740,7 @@ const handleSubmit = async (e) => {
               name="video_url"
               value={formData.video_url}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className={inputStyles}
               placeholder="Link to video on YouTube or Vimeo"
             />
             <p className="text-sm text-gray-600">Link to video on YouTube or Vimeo.</p>
@@ -721,8 +752,8 @@ const handleSubmit = async (e) => {
             </label>
             <div className="border border-gray-300 rounded-md overflow-hidden">
              <div className="flex bg-gray-100 p-2 border-b">
-               <button type="button" className="px-2 font-bold">B</button>
-               <button type="button" className="px-2">
+               <button type="button" className="px-2 font-bold text-black">B</button>
+               <button type="button" className="px-2 text-black">
                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                    <line x1="8" y1="6" x2="21" y2="6"></line>
                    <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -737,7 +768,7 @@ const handleSubmit = async (e) => {
                name="description"
                value={formData.description}
                onChange={handleInputChange}
-               className="w-full p-2 min-h-[150px] border-0 focus:ring-0 resize-y"
+               className={textareaStyles}
              ></textarea>
            </div>
          </div>
@@ -755,7 +786,7 @@ const handleSubmit = async (e) => {
                name="price"
                value={formData.price}
                onChange={handleInputChange}
-               className="w-full p-2 border border-gray-300 rounded-md pr-12"
+               className="w-full p-2 border border-gray-300 rounded-md pr-12 text-black bg-white"
                required
              />
              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">kr</span>
@@ -775,8 +806,8 @@ const handleSubmit = async (e) => {
              </svg>
            </div>
            <div>
-             <div className="text-blue-600">{localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).username : 'User'}</div>
-             <div className="text-gray-600">On SELGO since 2025</div>
+             <div className="text-blue-600 font-medium">{localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).username : 'User'}</div>
+             <div className="text-gray-600">On SELGO since {getUserRegistrationYear()}</div>
            </div>
          </div>
          
@@ -786,7 +817,7 @@ const handleSubmit = async (e) => {
              name="hide_profile"
              className="mr-2"
            />
-           <label>Do not show profile picture and link to profile page until buyer contacts me</label>
+           <label className="text-black">Do not show profile picture and link to profile page until buyer contacts me</label>
          </div>
          
          <div className="space-y-2">
@@ -794,32 +825,32 @@ const handleSubmit = async (e) => {
            <input
              type="text"
              name="postal_code"
-             className="w-full p-2 border border-gray-300 rounded-md"
+             className={inputStyles}
              placeholder="Enter postal code"
            />
          </div>
          
-       <div className="space-y-2">
-          <label className="block text-gray-700 font-medium">Country</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              readOnly={!formData.location_abroad}
-              className={`w-full p-2 border border-gray-300 rounded-md ${formData.location_abroad ? "" : "bg-gray-100"}`}
-            />
-            {!formData.location_abroad && (
-              <button 
-                type="button"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-                onClick={() => setCountry("Norge")}
-              >
-                ✕
-              </button>
-            )}
+         <div className="space-y-2">
+            <label className="block text-gray-700 font-medium">Country</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                readOnly={!formData.location_abroad}
+                className={`w-full p-2 border border-gray-300 rounded-md text-black ${formData.location_abroad ? "bg-white" : "bg-gray-100"}`}
+              />
+              {!formData.location_abroad && (
+                <button 
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  onClick={() => setCountry("Norge")}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-        </div>
        </div>
        
        {/* Preview and Submit Buttons */}
@@ -844,7 +875,7 @@ const handleSubmit = async (e) => {
            {loading ? "Creating..." : "Go ahead"}
          </button>
          
-         <p className="text-center text-sm">
+         <p className="text-center text-sm text-black">
            By continuing, you also agree to the 
            <a href="#" className="text-blue-600 ml-1">advertising rules</a>
          </p>

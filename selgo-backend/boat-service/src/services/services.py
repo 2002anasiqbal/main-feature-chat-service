@@ -6,7 +6,8 @@ from ..repositories.repositories import (
     BoatRepository, 
     BoatImageRepository, 
     BoatRatingRepository, 
-    BoatFixDoneRequestRepository
+    BoatFixDoneRequestRepository,
+    UserFavoriteRepository
 )
 from ..models.boat_models import (
     BoatCategory, 
@@ -15,6 +16,7 @@ from ..models.boat_models import (
     BoatImage, 
     BoatRating, 
     BoatFixDoneRequest,
+    UserFavorite,
     FixRequestStatus
 )
 from ..models.boat_schemas import (
@@ -92,6 +94,18 @@ class BoatFeatureService:
         return BoatFeatureRepository.delete(db, feature_id)
 
 class BoatService:
+    
+    @staticmethod
+    def search_boats_with_types(
+        db: Session, 
+        filters: BoatFilterParams,
+        boat_types: List[str] = None
+    ) -> Tuple[List[Boat], int]:
+        """
+        Search boats with support for multiple boat types
+        """
+        return BoatRepository.filter_boats_with_types(db, filters, boat_types)
+    
     @staticmethod
     def create_boat(db: Session, boat_data: BoatCreate, user_id: int) -> Boat:
         # Get features if provided
@@ -107,6 +121,7 @@ class BoatService:
         # Create the boat
         boat_dict = boat_data.dict(exclude={'features', 'images'})
         boat_dict['user_id'] = user_id
+        
         db_boat = BoatRepository.create(db, boat_dict, features)
         
         # Add images if provided
@@ -168,7 +183,15 @@ class BoatService:
     
     @staticmethod
     def filter_boats(db: Session, filters) -> Tuple[List[Boat], int]:
-        return BoatRepository.filter_boats(db, filters)
+        """
+        Enhanced filter method that handles boat types properly
+        """
+        
+        # ✅ Check if we have boat_types and use the appropriate repository method
+        if hasattr(filters, 'boat_types') and filters.boat_types and len(filters.boat_types) > 0:
+            return BoatRepository.filter_boats_with_types(db, filters, filters.boat_types)
+        else:
+            return BoatRepository.filter_boats(db, filters)
     
     @staticmethod
     def get_recommended_boats(db: Session, limit: int = 10) -> List[Boat]:
@@ -401,3 +424,38 @@ class LoanEstimateService:
             total_payable=round(total_payable, 2),
             breakdown=breakdown
         )
+
+
+#Favourites
+class UserFavoriteService:
+    @staticmethod
+    def toggle_favorite(db: Session, user_id: int, boat_id: int) -> Tuple[bool, str]:
+        """Toggle favorite status and return (is_favorite, message)"""
+        # Check if boat exists
+        boat = BoatRepository.get_by_id(db, boat_id)
+        if not boat:
+            raise ValueError("Boat not found")
+        
+        # Check current favorite status
+        is_currently_favorite = UserFavoriteRepository.is_favorite(db, user_id, boat_id)
+        
+        if is_currently_favorite:
+            # Remove from favorites
+            UserFavoriteRepository.remove_favorite(db, user_id, boat_id)
+            return False, "Removed from favorites"
+        else:
+            # Add to favorites
+            UserFavoriteRepository.add_favorite(db, user_id, boat_id)
+            return True, "Added to favorites"
+    
+    @staticmethod
+    def get_user_favorites(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[UserFavorite]:
+        return UserFavoriteRepository.get_user_favorites(db, user_id, skip, limit)
+    
+    @staticmethod
+    def get_favorites_count(db: Session, user_id: int) -> int:
+        return UserFavoriteRepository.get_favorites_count(db, user_id)
+    
+    @staticmethod
+    def is_favorite(db: Session, user_id: int, boat_id: int) -> bool:
+        return UserFavoriteRepository.is_favorite(db, user_id, boat_id)

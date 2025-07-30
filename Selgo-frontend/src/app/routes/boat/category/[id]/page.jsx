@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import BoatGrid from "@/components/boat/BoatGrid"; // Import BoatGrid instead of Page
+import BoatGrid from "@/components/boat/BoatGrid";
 import SearchBar from "@/components/root/SearchBar";
 import Sidebar from "@/components/general/Sidebar"; 
 import boatService from "@/services/boatService";
@@ -26,7 +26,7 @@ export default function BoatCategoryPage() {
     // Update category_id when URL param changes
     setFilters(prev => ({...prev, category_id: parseInt(categoryId, 10)}));
     
-      // Ensure we're fetching with the correct category ID
+    // Ensure we're fetching with the correct category ID
     console.log(`Fetching boats for category ID: ${categoryId}`);
     fetchBoatsByCategory();
     
@@ -36,10 +36,8 @@ export default function BoatCategoryPage() {
 
   // This will be triggered by the Sidebar component
   const handleFilterChange = (newFilters) => {
-    // Log the incoming filters
     console.log("⭐ Category page received filters:", JSON.stringify(newFilters, null, 2));
     
-    // Merge the new filters with the category ID
     const updatedFilters = {
       ...newFilters,
       category_id: parseInt(categoryId, 10),
@@ -50,50 +48,54 @@ export default function BoatCategoryPage() {
     console.log("⭐ Merged filters to be sent to API:", JSON.stringify(updatedFilters, null, 2));
     
     setFilters(updatedFilters);
+    
+    // Always use filter endpoint
     fetchBoatsByFilters(updatedFilters);
   };
 
-const fetchBoatsByCategory = async () => {
-  try {
-    setLoading(true);
-    
-    // Create a clean filter object with just the category ID
-    const categoryFilter = {
-      category_id: parseInt(categoryId, 10),
-      limit: 20,
-      offset: 0
-    };
-    
-    console.log(`🔍 Category Page: Fetching boats for category ${categoryId} with filter:`, categoryFilter);
-    
-    const response = await boatService.filterBoats(categoryFilter);
-    console.log(`🔍 Category Page: Received response with ${response.items?.length || 0} boats`);
-    
-    if (response.items && response.items.length > 0) {
-      console.log("First boat in results:", response.items[0]);
+  const fetchBoatsByCategory = async () => {
+    try {
+      setLoading(true);
+      
+      // Create a clean filter object with just the category ID
+      const categoryFilter = {
+        category_id: parseInt(categoryId, 10),
+        limit: 20,
+        offset: 0
+      };
+      
+      console.log(`🔍 Category Page: Fetching boats for category ${categoryId} with filter:`, categoryFilter);
+      
+      const response = await boatService.filterBoats(categoryFilter);
+      console.log(`🔍 Category Page: Received response with ${response.items?.length || 0} boats`);
+      
+      if (response.items && response.items.length > 0) {
+        console.log("First boat in results:", response.items[0]);
+      }
+      
+      setBoats(response.items || []);
+      setTotalResults(response.total || 0);
+    } catch (error) {
+      console.error("Error fetching boats by category:", error);
+      setBoats([]);
+    } finally {
+      setLoading(false);
     }
-    
-    setBoats(response.items || []);
-    setTotalResults(response.total || 0);
-  } catch (error) {
-    console.error("Error fetching boats by category:", error);
-    setBoats([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchBoatsByFilters = async (filterParams) => {
     try {
       setLoading(true);
-      console.log("🔍 Fetching boats with filters:", JSON.stringify(filterParams, null, 2));
+      console.log("🔍 Fetching boats with filter params:", JSON.stringify(filterParams, null, 2));
+      
+      // Use the filterBoats method directly
       const response = await boatService.filterBoats(filterParams);
       console.log("🔍 Filter API response:", response);
       
       setBoats(response.items || []);
       setTotalResults(response.total || 0);
     } catch (error) {
-      console.error("Error fetching boats with filters:", error);
+      console.error("❌ Error fetching boats with filters:", error);
       setBoats([]);
     } finally {
       setLoading(false);

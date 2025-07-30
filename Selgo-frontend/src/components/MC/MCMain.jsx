@@ -122,7 +122,7 @@ export default function MCMain() {
 
   return (
     <div className="pt-24 sm:pt-16 bg-white min-h-screen">
-      {/* ORIGINAL Hero Image - NO CHANGES */}
+      {/* ORIGINAL Hero Image - NO CHANGES
       <div className="relative w-full h-[500px] mb-6">
         <Image
           src="/assets/MC/motorcycle.svg"
@@ -131,7 +131,7 @@ export default function MCMain() {
           className="object-cover object-center"
           priority
         />
-      </div>
+      </div> */}
 
       {/* ORIGINAL Title - NO CHANGES */}
       <h1 className="text-5xl text-gray-900 font-bold pb-10">

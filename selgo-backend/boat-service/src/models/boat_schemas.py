@@ -221,6 +221,8 @@ class LoanEstimateResponse(BaseModel):
 # Filter schemas
 class BoatFilterParams(BaseModel):
     category_id: Optional[int] = None
+    boat_type: Optional[str] = None  
+    boat_types: Optional[List[str]] = None  # ✅ ADDED: Support for multiple boat types
     condition: Optional[BoatCondition] = None
     price_min: Optional[float] = None
     price_max: Optional[float] = None
@@ -229,13 +231,13 @@ class BoatFilterParams(BaseModel):
     length_min: Optional[float] = None
     length_max: Optional[float] = None
     location: Optional[GeoPoint] = None
-    distance: Optional[float] = None  # In kilometers
+    distance: Optional[float] = None
     seller_type: Optional[SellerType] = None
     ad_type: Optional[AdType] = None
-    features: Optional[List[int]] = None  # List of feature IDs
+    features: Optional[List[int]] = None
     search_term: Optional[str] = None
-    sort_by: Optional[str] = "created_at"  # Field to sort by
-    sort_order: Optional[str] = "desc"  # "asc" or "desc"
+    sort_by: Optional[str] = "created_at"
+    sort_order: Optional[str] = "desc"
     limit: int = 10
     offset: int = 0
 
@@ -244,6 +246,43 @@ class PaginatedResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+# Favorite schemas
+class UserFavoriteCreate(BaseModel):
+    boat_id: int
+    
+class FavoriteBoatInfo(BaseModel):
+    id: int
+    title: str
+    price: float
+    location_name: Optional[str] = None
+    year: Optional[int] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    length: Optional[float] = None
+    created_at: str  # Use string instead of datetime for JSON compatibility
+    primary_image: Optional[str] = None
+    
+class UserFavoriteSimple(BaseModel):
+    id: int
+    user_id: int
+    boat_id: int
+    created_at: str  # Use string instead of datetime for JSON compatibility
+    boat: FavoriteBoatInfo
+
+class UserFavoriteResponse(BaseModel):
+    id: int
+    user_id: int
+    boat_id: int
+    created_at: datetime
+    boat: BoatListResponse
+    
+    class Config:
+        orm_mode = True
+
+class FavoriteToggleResponse(BaseModel):
+    is_favorite: bool
+    message: str
 
 # Update the forward references
 BoatCategoryNestedResponse.update_forward_refs()

@@ -2,7 +2,8 @@
 import { useState } from "react";
 import SearchBar from "../root/SearchBar";
 import CardGenericFindingsList from "./CardGenericFindingsList";
-export default function FindingsList({ findings = [] }) {
+
+export default function FindingsList({ findings = [], type = "boat" }) {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [listName, setListName] = useState("");
@@ -32,7 +33,7 @@ export default function FindingsList({ findings = [] }) {
       </div>
 
       {/* Findings List (Now using GenericFindingsList) */}
-      <CardGenericFindingsList findings={filteredFindings} />
+<CardGenericFindingsList findings={filteredFindings} type={type} />
 
       {/* Modal Popup (No Background Change) */}
       {isModalOpen && (

@@ -1,9 +1,11 @@
-// In BoatCard.jsx
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import boatService from "@/services/boatService";
+import motorcycleService from "@/services/motorcycleService";
 
 const BoatCard = ({ 
   id, 
@@ -14,6 +16,8 @@ const BoatCard = ({
   route
 }) => {
   const router = useRouter();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Function to process image URL
   const getImageUrl = (imageUrl) => {
@@ -32,9 +36,73 @@ const BoatCard = ({
   // Use a local placeholder image or external fallback
   const imageUrl = getImageUrl(image);
   
+  // Check if boat is favorite on component mount
+useEffect(() => {
+  const checkFavoriteStatus = async () => {
+    try {
+      // Only check if user is logged in
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        let favorite;
+        
+        // Detect if this is a motorcycle by checking the route
+        if (route && route.includes('motor-cycle')) {
+          favorite = await motorcycleService.isMotorcycleFavorite(id);
+        } else {
+          favorite = await boatService.isBoatFavorite(id);
+        }
+        
+        setIsFavorite(favorite);
+      }
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  checkFavoriteStatus();
+}, [id, route]); 
+
   const handleClick = () => {
     router.push(route || `/routes/boat/${id}`);
   };
+
+  const handleFavoriteClick = async (e) => {
+  e.stopPropagation(); // Prevent card click when clicking heart
+  
+  // Check if user is logged in
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    alert("Please log in to save favorites.");
+    router.push('/routes/auth/signin');
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    let response;
+    
+    // Detect if this is a motorcycle by checking the route
+    if (route && route.includes('motor-cycle')) {
+      response = await motorcycleService.toggleFavorite(id);
+    } else {
+      response = await boatService.toggleFavorite(id);
+    }
+    
+    setIsFavorite(response.is_favorite);
+    
+    // Show feedback to user
+    if (response.is_favorite) {
+      console.log("Added to favorites!");
+    } else {
+      console.log("Removed from favorites!");
+    }
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    alert("Error updating favorites. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div 
@@ -54,7 +122,7 @@ const BoatCard = ({
             width={300}
             height={200}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-            unoptimized={true} // Set to true for all images to avoid Next.js optimization issues
+            unoptimized={true}
           />
           {/* Price Overlay */}
           <div className="absolute bottom-0 w-full transition-all duration-300 group-hover:h-1/3">
@@ -66,7 +134,18 @@ const BoatCard = ({
               <div className="hidden group-hover:block">
                 <div className="flex justify-between items-start">
                   <h3 className="text-sm font-semibold text-white">{title}</h3>
-                  <CiHeart className="text-white text-2xl cursor-pointer" />
+                  {/* Heart Icon in Hover State */}
+                  <button
+                    onClick={handleFavoriteClick}
+                    disabled={isLoading}
+                    className="text-white text-2xl cursor-pointer hover:scale-110 transition-transform"
+                  >
+                    {isFavorite ? (
+                      <FaHeart className="text-red-500" />
+                    ) : (
+                      <CiHeart />
+                    )}
+                  </button>
                 </div>
                 <span className="block text-xs font-black text-white mt-1">{price}</span>
                 <p className="text-xs text-white mt-2 truncate">{description}</p>
@@ -79,7 +158,18 @@ const BoatCard = ({
         <div className="p-3 group-hover:hidden">
           <div className="flex justify-between items-center">
             <h3 className="text-md font-semibold text-gray-900">{title}</h3>
-            <CiHeart className="text-teal-600 text-lg cursor-pointer" />
+            {/* Heart Icon in Normal State */}
+            <button
+              onClick={handleFavoriteClick}
+              disabled={isLoading}
+              className="text-lg cursor-pointer hover:scale-110 transition-transform"
+            >
+              {isFavorite ? (
+                <FaHeart className="text-red-500" />
+              ) : (
+                <CiHeart className="text-teal-600" />
+              )}
+            </button>
           </div>
           <p className="truncate text-xs text-gray-600 mt-1">{description}</p>
         </div>

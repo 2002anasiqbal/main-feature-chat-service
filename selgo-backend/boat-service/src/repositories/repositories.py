@@ -1,10 +1,12 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, or_, asc, desc
 from geoalchemy2 import Geometry
 from geoalchemy2.functions import ST_Distance, ST_Transform, ST_SetSRID, ST_MakePoint
 from typing import List, Optional, Dict, Any, Tuple
 from ..models.boat_models import BoatCategory, Boat, BoatImage, BoatFeature, BoatRating, BoatFixDoneRequest
+
 from ..models.boat_schemas import BoatFilterParams, GeoPoint, BoatCondition, SellerType, AdType
+from ..models.boat_models import BoatCategory, Boat, BoatImage, BoatFeature, BoatRating, BoatFixDoneRequest, UserFavorite
 import logging
 
 logger = logging.getLogger(__name__)
@@ -137,62 +139,67 @@ class BoatRepository:
     @staticmethod
     def filter_boats(db: Session, filters) -> Tuple[List[Boat], int]:
         from ..models.boat_schemas import BoatFilterParams
-        query = db.query(Boat)
+        query = db.query(Boat).filter(Boat.status == "active")
         
-        # print(f"Filtering boats with full parameters: {filters}")
+        # ✅ FIXED: Handle boat types filtering - support multiple types
+        if hasattr(filters, 'boat_types') and filters.boat_types:
+            
+            if isinstance(filters.boat_types, list) and len(filters.boat_types) > 0:
+                
+                query = query.filter(Boat.boat_type.in_(filters.boat_types))
+            elif isinstance(filters.boat_types, str):
+               
+                query = query.filter(Boat.boat_type == filters.boat_types)
+        else:
+            print(f"🚢 No boat_types found in filters")
         
-        # Apply filters if provided
+        # Apply other filters
         if hasattr(filters, 'category_id') and filters.category_id:
-            print(f"Applying category filter: {filters.category_id}")
+       
             query = query.filter(Boat.category_id == filters.category_id)
         
         if hasattr(filters, 'condition') and filters.condition:
-            print(f"Applying condition filter: {filters.condition}")
+            
             query = query.filter(Boat.condition == filters.condition)
         
         if hasattr(filters, 'price_min') and filters.price_min is not None:
-            print(f"Applying price_min filter: {filters.price_min}")
+         
             query = query.filter(Boat.price >= filters.price_min)
         
         if hasattr(filters, 'price_max') and filters.price_max is not None:
-            print(f"Applying price_max filter: {filters.price_max}")
+          
             query = query.filter(Boat.price <= filters.price_max)
         
         if hasattr(filters, 'year_min') and filters.year_min is not None:
-            print(f"Applying year_min filter: {filters.year_min}")
+           
             query = query.filter(Boat.year >= filters.year_min)
         
         if hasattr(filters, 'year_max') and filters.year_max is not None:
-            print(f"Applying year_max filter: {filters.year_max}")
+    
             query = query.filter(Boat.year <= filters.year_max)
         
         if hasattr(filters, 'length_min') and filters.length_min is not None:
-            print(f"Applying length_min filter: {filters.length_min}")
+            
             query = query.filter(Boat.length >= filters.length_min)
         
         if hasattr(filters, 'length_max') and filters.length_max is not None:
-            print(f"Applying length_max filter: {filters.length_max}")
+            
             query = query.filter(Boat.length <= filters.length_max)
         
         if hasattr(filters, 'seller_type') and filters.seller_type:
-            print(f"Applying seller_type filter: {filters.seller_type}")
+           
             query = query.filter(Boat.seller_type == filters.seller_type)
         
         if hasattr(filters, 'ad_type') and filters.ad_type:
-            print(f"Applying ad_type filter: {filters.ad_type}")
+            
             query = query.filter(Boat.ad_type == filters.ad_type)
         
         # Apply location-based filtering (distance search)
         if hasattr(filters, 'location') and hasattr(filters, 'distance') and filters.location and filters.distance:
-            print(f"Applying location filter: {filters.location} with distance: {filters.distance}km")
+        
             from geoalchemy2.functions import ST_Distance, ST_Transform, ST_SetSRID, ST_MakePoint
-            # Create a point from lat/lon
             point = ST_SetSRID(ST_MakePoint(filters.location.longitude, filters.location.latitude), 4326)
-            
-            # Calculate distance in meters (convert km to m)
             distance_meters = filters.distance * 1000
-            
-            # Filter by distance
             query = query.filter(
                 ST_Distance(
                     ST_Transform(Boat.location, 3857),
@@ -202,14 +209,13 @@ class BoatRepository:
         
         # Apply feature filtering
         if hasattr(filters, 'features') and filters.features and len(filters.features) > 0:
-            print(f"Applying features filter: {filters.features}")
-            # This requires a join with the association table
+          
             for feature_id in filters.features:
                 query = query.filter(Boat.features.any(BoatFeature.id == feature_id))
         
         # Apply text search
         if hasattr(filters, 'search_term') and filters.search_term:
-            print(f"Applying search_term filter: {filters.search_term}")
+            
             from sqlalchemy import or_
             search_term = f"%{filters.search_term}%"
             query = query.filter(
@@ -220,20 +226,24 @@ class BoatRepository:
                     Boat.model.ilike(search_term),
                     Boat.location_name.ilike(search_term)
                 )
-            
             )
+        
         from sqlalchemy import asc, desc
-        #Always sort by creation date (newest first)
+        # Always sort by creation date (newest first)
         query = query.order_by(desc(Boat.created_at))
+        
         # Get total count before pagination
         total = query.count()
-        print(f"Total matches before pagination: {total}")
+       
 
         # Apply pagination
         if hasattr(filters, 'offset') and hasattr(filters, 'limit'):
             query = query.offset(filters.offset).limit(filters.limit)
         
-        return query.all(), total
+        boats = query.all()
+      
+        
+        return boats, total
 
     @staticmethod
     def get_recommended_boats(db: Session, limit: int = 10) -> List[Boat]:
@@ -289,6 +299,72 @@ class BoatRepository:
             db.commit()
             db.refresh(db_boat)
         return db_boat
+    
+    @staticmethod
+    def filter_boats_with_types(db: Session, filters, boat_types: List[str] = None) -> Tuple[List[Boat], int]:
+        """
+        Filter boats with support for multiple boat types
+        """
+        query = db.query(Boat).filter(Boat.status == "active")
+        
+        # Handle multiple boat types
+        if boat_types and len(boat_types) > 0:
+            query = query.filter(Boat.boat_type.in_(boat_types))
+        
+        # Apply other filters (copy from your existing filter_boats method)
+        if hasattr(filters, 'category_id') and filters.category_id:
+            query = query.filter(Boat.category_id == filters.category_id)
+        
+        if hasattr(filters, 'condition') and filters.condition:
+            query = query.filter(Boat.condition == filters.condition)
+        
+        if hasattr(filters, 'price_min') and filters.price_min is not None:
+            query = query.filter(Boat.price >= filters.price_min)
+        
+        if hasattr(filters, 'price_max') and filters.price_max is not None:
+            query = query.filter(Boat.price <= filters.price_max)
+        
+        if hasattr(filters, 'year_min') and filters.year_min is not None:
+            query = query.filter(Boat.year >= filters.year_min)
+        
+        if hasattr(filters, 'year_max') and filters.year_max is not None:
+            query = query.filter(Boat.year <= filters.year_max)
+        
+        if hasattr(filters, 'length_min') and filters.length_min is not None:
+            query = query.filter(Boat.length >= filters.length_min)
+        
+        if hasattr(filters, 'length_max') and filters.length_max is not None:
+            query = query.filter(Boat.length <= filters.length_max)
+        
+        if hasattr(filters, 'seller_type') and filters.seller_type:
+            query = query.filter(Boat.seller_type == filters.seller_type)
+        
+        if hasattr(filters, 'ad_type') and filters.ad_type:
+            query = query.filter(Boat.ad_type == filters.ad_type)
+        
+        # Apply text search
+        if hasattr(filters, 'search_term') and filters.search_term:
+            search_term = f"%{filters.search_term}%"
+            query = query.filter(
+                or_(
+                    Boat.title.ilike(search_term),
+                    Boat.description.ilike(search_term),
+                    Boat.make.ilike(search_term),
+                    Boat.model.ilike(search_term),
+                    Boat.location_name.ilike(search_term)
+                )
+            )
+        
+        # Get total count
+        total = query.count()        
+        # Apply ordering and pagination
+        from sqlalchemy import desc
+        query = query.order_by(desc(Boat.created_at))
+        
+        if hasattr(filters, 'offset') and hasattr(filters, 'limit'):
+            query = query.offset(filters.offset).limit(filters.limit)
+        
+        return query.all(), total
     
 
 class BoatImageRepository:
@@ -447,3 +523,59 @@ class BoatFixDoneRequestRepository:
             db.commit()
             return True
         return False
+
+#Favorites
+
+class UserFavoriteRepository:
+    @staticmethod
+    def add_favorite(db: Session, user_id: int, boat_id: int) -> Optional[UserFavorite]:
+        # Check if already favorited
+        existing = db.query(UserFavorite).filter(
+            UserFavorite.user_id == user_id,
+            UserFavorite.boat_id == boat_id
+        ).first()
+        
+        if existing:
+            return existing
+        
+        # Create new favorite
+        favorite = UserFavorite(user_id=user_id, boat_id=boat_id)
+        db.add(favorite)
+        db.commit()
+        db.refresh(favorite)
+        return favorite
+    
+    @staticmethod
+    def remove_favorite(db: Session, user_id: int, boat_id: int) -> bool:
+        favorite = db.query(UserFavorite).filter(
+            UserFavorite.user_id == user_id,
+            UserFavorite.boat_id == boat_id
+        ).first()
+        
+        if favorite:
+            db.delete(favorite)
+            db.commit()
+            return True
+        return False
+    
+    @staticmethod
+    def is_favorite(db: Session, user_id: int, boat_id: int) -> bool:
+        return db.query(UserFavorite).filter(
+            UserFavorite.user_id == user_id,
+            UserFavorite.boat_id == boat_id
+        ).first() is not None
+    
+    @staticmethod
+    def get_user_favorites(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[UserFavorite]:
+        # ✅ FIX: Use proper eager loading to avoid 422 errors
+        return db.query(UserFavorite).options(
+            joinedload(UserFavorite.boat).joinedload(Boat.images)
+        ).filter(
+            UserFavorite.user_id == user_id
+        ).order_by(
+            UserFavorite.created_at.desc()
+        ).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_favorites_count(db: Session, user_id: int) -> int:
+        return db.query(UserFavorite).filter(UserFavorite.user_id == user_id).count()

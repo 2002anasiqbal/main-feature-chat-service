@@ -4,8 +4,11 @@ from typing import List, Optional
 import os
 import uuid
 from datetime import datetime
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 import logging
 logger = logging.getLogger(__name__)  # Add this line
+
 from ..services.services import (
     BoatCategoryService, 
     BoatFeatureService, 
@@ -16,6 +19,9 @@ from ..services.services import (
     LoanEstimateService
 )
 from ..models.boat_schemas import (
+    UserFavoriteCreate,
+    UserFavoriteResponse,
+    FavoriteToggleResponse,  
     BoatCategoryCreate,
     BoatCategoryResponse,
     BoatCategoryWithCountResponse,
@@ -52,6 +58,7 @@ router = APIRouter(
 )
 
 # ==================== Boat Category Routes ====================
+
 
 @router.post("/categories", response_model=BoatCategoryResponse, status_code=status.HTTP_201_CREATED)
 async def create_boat_category(
@@ -275,8 +282,83 @@ async def filter_boats(
     db: Session = Depends(get_db)
 ):
     """
-    Filter boat listings based on various criteria.
+    Filter boat listings based on various criteria including boat types.
     """
+    
+    boats, total = BoatService.filter_boats(db, filters)
+    
+    boat_list_responses = [BoatListResponse(
+        id=boat.id,
+        title=boat.title,
+        price=boat.price,
+        location_name=boat.location_name,
+        year=boat.year,
+        make=boat.make,
+        model=boat.model,
+        length=boat.length,
+        created_at=boat.created_at,
+        primary_image=next((img.image_url for img in boat.images if img.is_primary), 
+                          next((img.image_url for img in boat.images), None) if boat.images else None)
+    ) for boat in boats]
+        
+    return PaginatedResponse(
+        items=boat_list_responses,
+        total=total,
+        limit=filters.limit,
+        offset=filters.offset
+    )
+    
+@router.get("/search", response_model=PaginatedResponse)
+async def search_boats(
+    boat_type: Optional[str] = None,
+    boat_types: Optional[str] = None,  # Add this for multiple types
+    make: Optional[str] = None,
+    model: Optional[str] = None,
+    location_name: Optional[str] = None,
+    condition: Optional[str] = None,
+    seller_type: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    year_min: Optional[int] = None,
+    year_max: Optional[int] = None,
+    length_min: Optional[float] = None,
+    length_max: Optional[float] = None,
+    search_term: Optional[str] = None,
+    category_id: Optional[int] = None,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    Search boats with multiple filters including boat types
+    URL: /api/v1/boats/search
+    """
+    
+    # Parse multiple boat types if provided
+    selected_boat_types = []
+    if boat_types:
+        selected_boat_types = [t.strip() for t in boat_types.split(',')]
+    elif boat_type:
+        selected_boat_types = [boat_type]
+    
+    # Create filter object
+    filters = BoatFilterParams(
+        category_id=category_id,
+        condition=condition,
+        price_min=price_min,
+        price_max=price_max,
+        year_min=year_min,
+        year_max=year_max,
+        length_min=length_min,
+        length_max=length_max,
+        seller_type=seller_type,
+        search_term=search_term,
+        boat_types=selected_boat_types,  # ✅ FIXED: Use boat_types field
+        limit=per_page,
+        offset=(page - 1) * per_page
+    )
+    
+    # Use the enhanced filter method that handles boat types
     boats, total = BoatService.filter_boats(db, filters)
     
     boat_list_responses = [BoatListResponse(
@@ -296,9 +378,10 @@ async def filter_boats(
     return PaginatedResponse(
         items=boat_list_responses,
         total=total,
-        limit=filters.limit,
-        offset=filters.offset
+        limit=per_page,
+        offset=(page - 1) * per_page
     )
+    
 
 @router.get("/recommended", response_model=List[BoatListResponse])
 async def get_recommended_boats(
@@ -372,70 +455,6 @@ async def get_homepage_boats(
         primary_image=next((img.image_url for img in boat.images if img.is_primary), 
                           next((img.image_url for img in boat.images), None) if boat.images else None)
     ) for boat in boats]
-
-
-@router.get("/{boat_id}", response_model=BoatDetailResponse)
-async def get_boat(
-    boat_id: int = Path(..., description="The ID of the boat to get"),
-    increment_view: bool = Query(False, description="Whether to increment the view count"),
-    db: Session = Depends(get_db)
-):
-    """
-    Get a specific boat listing by ID.
-    """
-    boat = BoatService.get_boat_by_id(db, boat_id, increment_view)
-    if not boat:
-        raise HTTPException(status_code=404, detail="Boat not found")
-    
-    avg_rating = BoatRatingService.get_avg_rating(db, boat_id)
-    
-    response_dict = {
-        "id": boat.id,
-        "title": boat.title,
-        "description": boat.description,
-        "price": boat.price,
-        "category_id": boat.category_id,
-        "condition": boat.condition,
-        "year": boat.year,
-        "make": boat.make,
-        "model": boat.model,
-        "length": boat.length,
-        "beam": boat.beam,
-        "draft": boat.draft,
-        "fuel_type": boat.fuel_type,
-        "hull_material": boat.hull_material,
-        "engine_make": boat.engine_make,
-        "engine_model": boat.engine_model,
-        "engine_hours": boat.engine_hours,
-        "engine_power": boat.engine_power,
-        "seller_type": boat.seller_type,
-        "ad_type": boat.ad_type,
-        "is_featured": boat.is_featured,
-        "location_name": boat.location_name,
-        "status": boat.status,
-        "user_id": boat.user_id,
-        "view_count": boat.view_count,
-        "created_at": boat.created_at,
-        "updated_at": boat.updated_at,
-        "category": boat.category,
-        "images": boat.images,
-        "features": boat.features,
-        "fix_requests": boat.fix_requests,
-        "ratings": boat.ratings,
-        "avg_rating": avg_rating
-    }
-    
-    if boat.location:
-        try:
-            from geoalchemy2.shape import to_shape
-            point = to_shape(boat.location)
-            response_dict["location"] = {"latitude": point.y, "longitude": point.x}
-        except:
-            response_dict["location"] = None
-    else:
-        response_dict["location"] = None
-    
-    return BoatDetailResponse(**response_dict)
 
 @router.put("/{boat_id}", response_model=BoatResponse)
 async def update_boat(
@@ -606,7 +625,8 @@ from ..services.services import (
     BoatImageService, 
     BoatRatingService, 
     BoatFixDoneRequestService,
-    LoanEstimateService
+    LoanEstimateService,
+    UserFavoriteService
 )
 # ... rest of your imports ...
 
@@ -715,3 +735,359 @@ async def calculate_loan_estimate(loan_data: LoanEstimateRequest):
     Calculate loan payments for a boat.
     """
     return LoanEstimateService.calculate_loan(loan_data)
+
+from sqlalchemy.orm import joinedload
+from fastapi.responses import JSONResponse
+
+
+
+# Add these NEW routes to your routes.py file (don't replace anything yet, just add these)
+
+@router.get("/favorites-simple")
+async def get_favorites_simple(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Simple favorites endpoint that definitely works
+    """
+    try:
+        logger.info(f"🔍 SIMPLE: Fetching favorites for user {current_user_id}")
+        
+        from sqlalchemy import text
+        
+        # Very simple query
+        query = text("""
+            SELECT 
+                uf.id,
+                uf.user_id,
+                uf.boat_id,
+                uf.created_at,
+                b.title,
+                b.price,
+                b.make,
+                b.model,
+                b.year,
+                b.location_name
+            FROM user_favorites uf
+            JOIN boats b ON uf.boat_id = b.id
+            WHERE uf.user_id = :user_id
+            ORDER BY uf.created_at DESC
+        """)
+        
+        result = db.execute(query, {"user_id": current_user_id})
+        rows = result.fetchall()
+        
+        # Build simple response
+        favorites = []
+        for row in rows:
+            favorite = {
+                "id": row[0],
+                "user_id": row[1],
+                "boat_id": row[2],
+                "created_at": str(row[3]),
+                "boat": {
+                    "id": row[2],
+                    "title": row[4] or "Unknown Boat",
+                    "price": float(row[5]) if row[5] else 0.0,
+                    "make": row[6],
+                    "model": row[7],
+                    "year": row[8],
+                    "location_name": row[9],
+                    "primary_image": None
+                }
+            }
+            favorites.append(favorite)
+        
+        logger.info(f"✅ SIMPLE: Found {len(favorites)} favorites")
+        
+        # Return plain JSON - no Pydantic validation
+        return JSONResponse(content=favorites)
+        
+    except Exception as e:
+        logger.error(f"❌ SIMPLE Error: {str(e)}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        return JSONResponse(content=[])
+
+# ==================== Favorites Routes ====================
+
+@router.post("/favorites/toggle", response_model=FavoriteToggleResponse)
+async def toggle_favorite(
+    favorite_data: UserFavoriteCreate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Toggle favorite status for a boat.
+    """
+    try:
+        is_favorite, message = UserFavoriteService.toggle_favorite(
+            db, current_user_id, favorite_data.boat_id
+        )
+        return FavoriteToggleResponse(is_favorite=is_favorite, message=message)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/user-favorites")
+async def get_user_favorites_new_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    NEW WORKING ENDPOINT: Get all favorite boats for the current user.
+    Returns raw JSON to avoid Pydantic validation issues.
+    """
+    try:
+        logger.info(f"🔍 NEW ENDPOINT: Fetching favorites for user {current_user_id}")
+        
+        # Direct SQL query to avoid ORM issues
+        from sqlalchemy import text
+        
+        sql_query = text("""
+            SELECT 
+                uf.id as favorite_id,
+                uf.user_id,
+                uf.boat_id,
+                uf.created_at as favorite_created_at,
+                b.id as boat_table_id,
+                b.title,
+                b.price,
+                b.location_name,
+                b.year,
+                b.make,
+                b.model,
+                b.length,
+                b.created_at as boat_created_at,
+                bi.image_url as primary_image
+            FROM user_favorites uf
+            LEFT JOIN boats b ON uf.boat_id = b.id
+            LEFT JOIN boat_images bi ON b.id = bi.boat_id AND bi.is_primary = true
+            WHERE uf.user_id = :user_id
+            ORDER BY uf.created_at DESC
+            LIMIT :limit OFFSET :skip
+        """)
+        
+        result = db.execute(sql_query, {
+            "user_id": current_user_id,
+            "limit": limit,
+            "skip": skip
+        })
+        
+        rows = result.fetchall()
+        logger.info(f"🔍 NEW ENDPOINT: Query returned {len(rows)} rows")
+        
+        # Convert to simple dict format
+        favorites_list = []
+        for row in rows:
+            favorite_item = {
+                "id": row.favorite_id,
+                "user_id": row.user_id,
+                "boat_id": row.boat_id,
+                "created_at": row.favorite_created_at.isoformat() if row.favorite_created_at else None,
+                "boat": {
+                    "id": row.boat_id,
+                    "title": row.title or "Unknown Boat",
+                    "price": float(row.price) if row.price else 0.0,
+                    "location_name": row.location_name,
+                    "year": row.year,
+                    "make": row.make,
+                    "model": row.model,
+                    "length": float(row.length) if row.length else None,
+                    "created_at": row.boat_created_at.isoformat() if row.boat_created_at else None,
+                    "primary_image": row.primary_image
+                }
+            }
+            favorites_list.append(favorite_item)
+        
+        logger.info(f"✅ NEW ENDPOINT: Successfully processed {len(favorites_list)} favorites")
+        
+        # Return as plain JSON response - this bypasses Pydantic validation
+        return JSONResponse(content=favorites_list)
+        
+    except Exception as e:
+        logger.error(f"❌ NEW ENDPOINT Error: {e}")
+        import traceback
+        logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        return JSONResponse(content=[])
+
+@router.get("/favorites")
+async def get_user_favorites_original(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    ORIGINAL ENDPOINT - Fixed version that returns raw JSON
+    """
+    try:
+        logger.info(f"🔍 ORIGINAL: Fetching favorites for user {current_user_id}")
+        
+        # Use the same SQL approach for consistency
+        from sqlalchemy import text
+        
+        sql_query = text("""
+            SELECT 
+                uf.id as favorite_id,
+                uf.user_id,
+                uf.boat_id,
+                uf.created_at as favorite_created_at,
+                b.id as boat_table_id,
+                b.title,
+                b.price,
+                b.location_name,
+                b.year,
+                b.make,
+                b.model,
+                b.length,
+                b.created_at as boat_created_at,
+                bi.image_url as primary_image
+            FROM user_favorites uf
+            LEFT JOIN boats b ON uf.boat_id = b.id
+            LEFT JOIN boat_images bi ON b.id = bi.boat_id AND bi.is_primary = true
+            WHERE uf.user_id = :user_id
+            ORDER BY uf.created_at DESC
+            LIMIT :limit OFFSET :skip
+        """)
+        
+        result = db.execute(sql_query, {
+            "user_id": current_user_id,
+            "limit": limit,
+            "skip": skip
+        })
+        
+        rows = result.fetchall()
+        logger.info(f"🔍 ORIGINAL: Query returned {len(rows)} rows")
+        
+        # Convert to simple dict format
+        favorites_list = []
+        for row in rows:
+            favorite_item = {
+                "id": row.favorite_id,
+                "user_id": row.user_id,
+                "boat_id": row.boat_id,
+                "created_at": row.favorite_created_at.isoformat() if row.favorite_created_at else None,
+                "boat": {
+                    "id": row.boat_id,
+                    "title": row.title or "Unknown Boat",
+                    "price": float(row.price) if row.price else 0.0,
+                    "location_name": row.location_name,
+                    "year": row.year,
+                    "make": row.make,
+                    "model": row.model,
+                    "length": float(row.length) if row.length else None,
+                    "created_at": row.boat_created_at.isoformat() if row.boat_created_at else None,
+                    "primary_image": row.primary_image
+                }
+            }
+            favorites_list.append(favorite_item)
+        
+        logger.info(f"✅ ORIGINAL: Successfully processed {len(favorites_list)} favorites")
+        
+        # Return as plain JSON response
+        return JSONResponse(content=favorites_list)
+        
+    except Exception as e:
+        logger.error(f"❌ ORIGINAL Error: {e}")
+        import traceback
+        logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        return JSONResponse(content=[])
+
+@router.get("/favorites/count")
+async def get_favorites_count(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Get count of favorite boats for the current user.
+    """
+    try:
+        count = UserFavoriteService.get_favorites_count(db, current_user_id)
+        return {"count": count}
+    except Exception as e:
+        logger.error(f"❌ Error getting favorites count: {e}")
+        return {"count": 0}
+
+@router.get("/{boat_id}/is-favorite")
+async def check_if_favorite(
+    boat_id: int = Path(..., description="The ID of the boat to check"),
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Check if a specific boat is favorited by the current user.
+    """
+    try:
+        is_favorite = UserFavoriteService.is_favorite(db, current_user_id, boat_id)
+        return {"is_favorite": is_favorite}
+    except Exception as e:
+        logger.error(f"❌ Error checking favorite status: {e}")
+        return {"is_favorite": False}
+
+#IMPORTANT PASTED HERE
+@router.get("/{boat_id}", response_model=BoatDetailResponse)
+async def get_boat(
+    boat_id: int = Path(..., description="The ID of the boat to get"),
+    increment_view: bool = Query(False, description="Whether to increment the view count"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific boat listing by ID.
+    """
+    boat = BoatService.get_boat_by_id(db, boat_id, increment_view)
+    if not boat:
+        raise HTTPException(status_code=404, detail="Boat not found")
+    
+    avg_rating = BoatRatingService.get_avg_rating(db, boat_id)
+    
+    response_dict = {
+        "id": boat.id,
+        "title": boat.title,
+        "description": boat.description,
+        "price": boat.price,
+        "category_id": boat.category_id,
+        "boat_type": boat.boat_type, 
+        "condition": boat.condition,
+        "year": boat.year,
+        "make": boat.make,
+        "model": boat.model,
+        "length": boat.length,
+        "beam": boat.beam,
+        "draft": boat.draft,
+        "fuel_type": boat.fuel_type,
+        "hull_material": boat.hull_material,
+        "engine_make": boat.engine_make,
+        "engine_model": boat.engine_model,
+        "engine_hours": boat.engine_hours,
+        "engine_power": boat.engine_power,
+        "seller_type": boat.seller_type,
+        "ad_type": boat.ad_type,
+        "is_featured": boat.is_featured,
+        "location_name": boat.location_name,
+        "status": boat.status,
+        "user_id": boat.user_id,
+        "view_count": boat.view_count,
+        "created_at": boat.created_at,
+        "updated_at": boat.updated_at,
+        "category": boat.category,
+        "images": boat.images,
+        "features": boat.features,
+        "fix_requests": boat.fix_requests,
+        "ratings": boat.ratings,
+        "avg_rating": avg_rating
+    }
+    
+    if boat.location:
+        try:
+            from geoalchemy2.shape import to_shape
+            point = to_shape(boat.location)
+            response_dict["location"] = {"latitude": point.y, "longitude": point.x}
+        except:
+            response_dict["location"] = None
+    else:
+        response_dict["location"] = None
+    
+    return BoatDetailResponse(**response_dict)

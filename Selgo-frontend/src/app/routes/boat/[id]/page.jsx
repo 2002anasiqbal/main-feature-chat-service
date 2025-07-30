@@ -211,31 +211,44 @@ const submitFixDoneRequest = async (e) => {
       </div>
     );
   }
-
+console.log("🐛 Frontend boat data:", boat);
+console.log("🐛 Frontend boat_type:", boat.boat_type);
   const images = boat.images || [];
   const imageUrls = images.length > 0 
     ? images.map(img => img.image_url || img) 
     : ["/assets/boat/placeholder.jpg"];
 
-  const keyInfo = `${boat.year || "N/A"} · ${boat.make || ""} ${boat.model || ""} · Length: ${boat.length ? `${boat.length} ft` : "Not specified"}`;
+// Helper function to format boat type
+const formatBoatType = (boatType) => {
+  if (!boatType) return "N/A";
   
-  const expandedKeyInfo = (
-    <div className="space-y-2">
-      <p><strong>Year:</strong> {boat.year || "N/A"}</p>
-      <p><strong>Make:</strong> {boat.make || "N/A"}</p>
-      <p><strong>Model:</strong> {boat.model || "N/A"}</p>
-      <p><strong>Length:</strong> {boat.length ? `${boat.length} ft` : "N/A"}</p>
-      <p><strong>Beam:</strong> {boat.beam ? `${boat.beam} ft` : "N/A"}</p>
-      <p><strong>Draft:</strong> {boat.draft ? `${boat.draft} ft` : "N/A"}</p>
-      <p><strong>Fuel Type:</strong> {boat.fuel_type || "N/A"}</p>
-      <p><strong>Hull Material:</strong> {boat.hull_material || "N/A"}</p>
-      <p><strong>Engine Make:</strong> {boat.engine_make || "N/A"}</p>
-      <p><strong>Engine Model:</strong> {boat.engine_model || "N/A"}</p>
-      <p><strong>Engine Hours:</strong> {boat.engine_hours || "N/A"}</p>
-      <p><strong>Engine Power:</strong> {boat.engine_power ? `${boat.engine_power} HP` : "N/A"}</p>
-      <p><strong>Condition:</strong> {boat.condition?.replace(/_/g, ' ').charAt(0).toUpperCase() + boat.condition?.slice(1).replace(/_/g, ' ') || "N/A"}</p>
-    </div>
-  );
+  // Convert snake_case to Title Case
+  return boatType
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+const keyInfo = `${boat.year || "N/A"} · ${boat.make || ""} ${boat.model || ""} · ${formatBoatType(boat.boat_type)} · Length: ${boat.length ? `${boat.length} ft` : "Not specified"}`;
+
+const expandedKeyInfo = (
+  <div className="space-y-2">
+    <p><strong>Year:</strong> {boat.year || "N/A"}</p>
+    <p><strong>Make:</strong> {boat.make || "N/A"}</p>
+    <p><strong>Model:</strong> {boat.model || "N/A"}</p>
+    <p><strong>Boat Type:</strong> {formatBoatType(boat.boat_type)}</p>
+    <p><strong>Length:</strong> {boat.length ? `${boat.length} ft` : "N/A"}</p>
+    <p><strong>Beam:</strong> {boat.beam ? `${boat.beam} ft` : "N/A"}</p>
+    <p><strong>Draft:</strong> {boat.draft ? `${boat.draft} ft` : "N/A"}</p>
+    <p><strong>Fuel Type:</strong> {boat.fuel_type || "N/A"}</p>
+    <p><strong>Hull Material:</strong> {boat.hull_material || "N/A"}</p>
+    <p><strong>Engine Make:</strong> {boat.engine_make || "N/A"}</p>
+    <p><strong>Engine Model:</strong> {boat.engine_model || "N/A"}</p>
+    <p><strong>Engine Hours:</strong> {boat.engine_hours || "N/A"}</p>
+    <p><strong>Engine Power:</strong> {boat.engine_power ? `${boat.engine_power} HP` : "N/A"}</p>
+    <p><strong>Condition:</strong> {boat.condition?.replace(/_/g, ' ').charAt(0).toUpperCase() + boat.condition?.slice(1).replace(/_/g, ' ') || "N/A"}</p>
+  </div>
+);
   
   const description = boat.description || "No description provided.";
   

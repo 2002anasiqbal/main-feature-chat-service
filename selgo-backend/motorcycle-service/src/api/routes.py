@@ -16,7 +16,7 @@ from ..models.schemas import (
     MotorcycleSearchFilters, MapFilterRequest, PaginatedResponse,
     MotorcycleCategory, MotorcycleCategoryCreate, LoanCalculationRequest, LoanCalculationResponse
 )
-from ..models import models
+from ..models import models, schemas
 
 router = APIRouter()
 
@@ -114,6 +114,7 @@ async def create_motorcycle(
 @router.get("/motorcycles/search", response_model=PaginatedResponse)
 async def search_motorcycles(
     motorcycle_type: Optional[str] = None,
+    motorcycle_types: Optional[str] = None,  # Add this for multiple types
     brand: Optional[str] = None,
     model: Optional[str] = None,
     city: Optional[str] = None,
@@ -127,7 +128,7 @@ async def search_motorcycles(
     mileage_max: Optional[int] = None,
     search_term: Optional[str] = None,
     category_id: Optional[int] = None,
-    category_name: Optional[str] = None,  # Add this parameter
+    category_name: Optional[str] = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -136,6 +137,16 @@ async def search_motorcycles(
     Show bikes based on type (Adventure, Nakne, Touring, Sports)
     URL: /api/motorcycles/search
     """
+    
+    # Parse multiple motorcycle types if provided
+    selected_motorcycle_types = []
+    if motorcycle_types:
+        # motorcycle_types will be a comma-separated string like "adventure,sport,cruiser"
+        selected_motorcycle_types = [t.strip() for t in motorcycle_types.split(',')]
+        print(f"🔍 Multiple motorcycle types selected: {selected_motorcycle_types}")
+    elif motorcycle_type:
+        # Fallback to single type for backward compatibility
+        selected_motorcycle_types = [motorcycle_type]
     
     # If category_name is provided, find the category_id
     if category_name and not category_id:
@@ -148,14 +159,11 @@ async def search_motorcycles(
         else:
             print(f"❌ Category '{category_name}' not found")
     
-    # First, let's check total count in database
-    total_in_db = db.query(models.Motorcycle).count()
-    active_in_db = db.query(models.Motorcycle).filter(models.Motorcycle.is_active == True).count()
-    
+    # Build filters object
     filters = MotorcycleSearchFilters(
         category_id=category_id,
-        category_name=category_name,  # Include this
-        motorcycle_type=motorcycle_type,
+        category_name=category_name,
+        motorcycle_type=None,  # Don't use single type when we have multiple
         brand=brand,
         model=model,
         city=city,
@@ -170,8 +178,10 @@ async def search_motorcycles(
         search_term=search_term
     )
     
-    motorcycles, total = MotorcycleService.search_motorcycles(db, filters, page, per_page)
- 
+    # Pass selected motorcycle types separately to the service
+    motorcycles, total = MotorcycleService.search_motorcycles(
+        db, filters, page, per_page, selected_motorcycle_types
+    )
     # Convert to response format
     items = []
     for motorcycle in motorcycles:
@@ -214,20 +224,7 @@ async def search_motorcycles(
     return response
 
 # 3. MotorcycleDetailModule
-@router.get("/motorcycles/{motorcycle_id}", response_model=Motorcycle)
-async def get_motorcycle_detail(
-    motorcycle_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Show bike detail page including specs, images, seller info, and contact button
-    URL: /api/motorcycles/{id}
-    """
-    motorcycle = MotorcycleService.get_motorcycle(db, motorcycle_id)
-    if not motorcycle:
-        raise HTTPException(status_code=404, detail="Motorcycle not found")
-    
-    return motorcycle
+
 
 # 4. MotorcycleMapFilterModule
 @router.post("/motorcycles/filter/map", response_model=PaginatedResponse)
@@ -510,6 +507,200 @@ async def send_email_notification(
     print(f"Sending email to {seller_email} about {motorcycle_title}")
     print(f"Message: {message_content}")
     print(f"From: {sender_email}, Phone: {sender_phone}")
+
+
+from fastapi.responses import JSONResponse
+
+# ==================== Authentication Helper ====================
+
+from fastapi import Header, HTTPException
+import requests
+from typing import Optional
+
+def get_current_user_id(authorization: Optional[str] = Header(None)) -> int:
+    """
+    Extract user ID from JWT token by validating with auth service
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header format")
+    
+    token = authorization.split(" ")[1]
+    
+    try:
+        # Validate token with your auth service
+        auth_service_url = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
+        
+        response = requests.get(
+            f"{auth_service_url}/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            user_data = response.json()
+            user_id = user_data.get("id") or user_data.get("user_id")
+            
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Invalid user data")
+                
+            print(f"✅ Authenticated user: {user_id}")
+            return user_id
+        else:
+            print(f"❌ Auth service returned: {response.status_code}")
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Auth service error: {e}")
+        raise HTTPException(status_code=401, detail="Authentication service unavailable")
+    except Exception as e:
+        print(f"❌ Authentication error: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+# ==================== Favorites Routes ====================
+
+@router.post("/motorcycles/favorites/toggle")
+async def toggle_favorite_motorcycle(
+    favorite_data: schemas.UserFavoriteMotorcycleCreate,
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Toggle favorite status for a motorcycle.
+    """
+    try:
+        print(f"🔍 User {current_user_id} toggling favorite for motorcycle {favorite_data.motorcycle_id}")
+        
+        is_favorite, message = UserFavoriteMotorcycleService.toggle_favorite(
+            db, current_user_id, favorite_data.motorcycle_id
+        )
+        return schemas.FavoriteToggleResponse(is_favorite=is_favorite, message=message)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/motorcycles/favorites-simple")
+async def get_motorcycle_favorites_simple(
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Simple motorcycle favorites endpoint that includes images
+    """
+    try:
+        print(f"🔍 SIMPLE: Fetching motorcycle favorites for user {current_user_id}")
+        
+        from sqlalchemy import text
+        
+        # Query that includes image information
+        query = text("""
+            SELECT 
+                uf.id,
+                uf.user_id,
+                uf.motorcycle_id,
+                uf.created_at,
+                m.title,
+                m.brand,
+                m.model,
+                m.year,
+                m.price,
+                m.city,
+                m.motorcycle_type,
+                m.condition,
+                mi.image_url as primary_image
+            FROM user_favorite_motorcycles uf
+            JOIN motorcycles m ON uf.motorcycle_id = m.id
+            LEFT JOIN motorcycle_images mi ON m.id = mi.motorcycle_id AND mi.is_primary = true
+            WHERE uf.user_id = :user_id
+            ORDER BY uf.created_at DESC
+        """)
+        
+        result = db.execute(query, {"user_id": current_user_id})
+        rows = result.fetchall()
+        
+        # Build response with images
+        favorites = []
+        for row in rows:
+            favorite = {
+                "id": row[0],
+                "user_id": row[1],
+                "motorcycle_id": row[2],
+                "created_at": str(row[3]),
+                "motorcycle": {
+                    "id": row[2],
+                    "title": row[4] or "Unknown Motorcycle",
+                    "brand": row[5],
+                    "model": row[6],
+                    "year": row[7],
+                    "price": float(row[8]) if row[8] else 0.0,
+                    "city": row[9],
+                    "motorcycle_type": row[10],
+                    "condition": row[11],
+                    "primary_image": row[12]
+                }
+            }
+            favorites.append(favorite)
+        
+        print(f"✅ SIMPLE: Found {len(favorites)} motorcycle favorites with images for user {current_user_id}")
+        return JSONResponse(content=favorites)
+        
+    except Exception as e:
+        print(f"❌ SIMPLE Error: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return JSONResponse(content=[])
+
+@router.get("/motorcycles/favorites/count")
+async def get_favorites_count(
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Get count of favorite motorcycles for the current user.
+    """
+    try:
+        count = UserFavoriteMotorcycleService.get_favorites_count(db, current_user_id)
+        return {"count": count}
+    except Exception as e:
+        print(f"❌ Error getting favorites count: {e}")
+        return {"count": 0}
+
+@router.get("/motorcycles/{motorcycle_id}/is-favorite")
+async def check_if_favorite_motorcycle(
+    motorcycle_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if a specific motorcycle is favorited by the current user.
+    """
+    try:
+        is_favorite = UserFavoriteMotorcycleService.is_favorite(db, current_user_id, motorcycle_id)
+        return {"is_favorite": is_favorite}
+    except Exception as e:
+        print(f"❌ Error checking favorite status: {e}")
+        return {"is_favorite": False}
+
+
+
+@router.get("/motorcycles/{motorcycle_id}", response_model=Motorcycle)
+async def get_motorcycle_detail(
+    motorcycle_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Show bike detail page including specs, images, seller info, and contact button
+    URL: /api/motorcycles/{id}
+    """
+    motorcycle = MotorcycleService.get_motorcycle(db, motorcycle_id)
+    if not motorcycle:
+        raise HTTPException(status_code=404, detail="Motorcycle not found")
+    
+    return motorcycle
+# Import the new services
+from ..services.services import UserFavoriteMotorcycleService, UserFavoriteMotorcycleRepository
+
 
 # Import models here to avoid circular imports
 from ..models import models
