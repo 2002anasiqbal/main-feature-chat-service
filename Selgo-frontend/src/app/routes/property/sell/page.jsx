@@ -1,30 +1,84 @@
-"use client"
+// Selgo-frontend/src/app/routes/property/sell/page.jsx (Updated)
+"use client";
+import React, { useState, useEffect } from "react";
 import PriceGrid from "@/components/property/PriceGrid";
 import LocationMap from "@/components/general/LocationMap";
 import Image from "next/image";
 import FeedbackForm from "@/components/general/FeedbackForm";
-const backendData = [
-    { title: "Bergen", value: "NOK 541235", description: "On average per advertisement in last 30 days" },
-    { title: "Oslo", value: "NOK 620000", description: "On average per advertisement in last 30 days" },
-    { title: "Stavanger", value: "NOK 495000", description: "On average per advertisement in last 30 days" },
-    { title: "Trondheim", value: "NOK 560000", description: "On average per advertisement in last 30 days" },
-    { title: "Drammen", value: "NOK 480000", description: "On average per advertisement in last 30 days" },
-    { title: "Kristiansand", value: "NOK 510000", description: "On average per advertisement in last 30 days" },
-];
+import propertyService from "@/services/propertyService";
 
 export default function SellPage() {
-      // Handle feedback submission
-      const handleFeedbackSubmit = (message) => {
-        console.log("Feedback received:", message);
-        // Here, you can send feedback to an API, store in the database, etc.
+    const [priceInsights, setPriceInsights] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPriceInsights = async () => {
+            try {
+                const insights = await propertyService.getPriceInsights();
+                
+                // Transform insights to match the expected format
+                const transformedData = insights.map(insight => ({
+                    title: insight.city,
+                    value: `${insight.currency} ${Number(insight.avg_price_per_sqm).toLocaleString()}`,
+                    description: insight.period_description
+                }));
+
+                setPriceInsights(transformedData);
+            } catch (error) {
+                console.error('Failed to fetch price insights:', error);
+                // Fallback to static data if API fails
+                setPriceInsights([
+                    { title: "Bergen", value: "NOK 541235", description: "On average per advertisement in last 30 days" },
+                    { title: "Oslo", value: "NOK 620000", description: "On average per advertisement in last 30 days" },
+                    { title: "Stavanger", value: "NOK 495000", description: "On average per advertisement in last 30 days" },
+                    { title: "Trondheim", value: "NOK 560000", description: "On average per advertisement in last 30 days" },
+                    { title: "Drammen", value: "NOK 480000", description: "On average per advertisement in last 30 days" },
+                    { title: "Kristiansand", value: "NOK 510000", description: "On average per advertisement in last 30 days" },
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPriceInsights();
+    }, []);
+
+    // Handle feedback submission
+    const handleFeedbackSubmit = async (message) => {
+        try {
+            const result = await propertyService.submitFeedback({
+                message,
+                page_url: window.location.href
+            });
+            
+            console.log("Feedback submitted successfully:", result);
+            alert("Thank you for your feedback!");
+        } catch (error) {
+            console.error("Failed to submit feedback:", error);
+            alert("Failed to submit feedback. Please try again later.");
+        }
     };
+
     return (
         <div>
-            <LocationMap heading="Check what price homes in your area have sold for" />
-            <button className=" block mx-auto bg-teal-600 hover:bg-teal-800 h-15 px-10 border rounded-lg text-white font-semiboldbold">See Sale Price</button>
+            <LocationMap 
+                heading="Check what price homes in your area have sold for"
+                latitude={59.9139}
+                longitude={10.7522}
+                locationName="Norway"
+            />
+            <button className="block mx-auto bg-teal-600 hover:bg-teal-800 h-15 px-10 border rounded-lg text-white font-semibold">
+                See Sale Price
+            </button>
+            
             <div className="bg-white">
-                <PriceGrid data={backendData} />
+                {loading ? (
+                    <div className="text-center py-10">Loading price insights...</div>
+                ) : (
+                    <PriceGrid data={priceInsights} />
+                )}
             </div>
+            
             <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-8">
                 {/* Text Content (Left Side) */}
                 <div className="w-full md:w-2/3">
@@ -53,7 +107,10 @@ export default function SellPage() {
                     />
                 </div>
             </div>
-            <h3 className="my-10 text-2xl font-bold text-gray-900">Are you wondering about something, or are you missing something on this page?</h3>            
+            
+            <h3 className="my-10 text-2xl font-bold text-gray-900">
+                Are you wondering about something, or are you missing something on this page?
+            </h3>            
             <FeedbackForm onSubmit={handleFeedbackSubmit} />
         </div>
     );

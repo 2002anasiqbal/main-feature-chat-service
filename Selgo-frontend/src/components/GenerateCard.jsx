@@ -1,11 +1,10 @@
-// Selgo-frontend/src/components/GenerateCard.jsx 
-// MINIMAL CHANGES - Only adding motorcycle backend support to existing component
-
+// Selgo-frontend/src/components/GenerateCard.jsx (Updated for Property Integration)
 "use client";
 import React, { useState, useEffect } from "react";
 import BoatCard from "./boat/BoatCard";
 import boatService from "@/services/boatService";
-import motorcycleService from "@/services/motorcycleService"; // Only addition
+import motorcycleService from "@/services/motorcycleService";
+import propertyService from "@/services/propertyService"; // NEW IMPORT
 
 const Page = ({ 
   columns = 3, 
@@ -23,46 +22,55 @@ const Page = ({
       return;
     }
 
- if (initialCards !== null && initialCards !== undefined) {
-    console.log("Using provided cards:", initialCards);
-    
-    const formattedCards = initialCards.map(item => {
-      if (item.image !== undefined && item.title && item.description && item.price) {
-        return item;
-      }
+    if (initialCards !== null && initialCards !== undefined) {
+      console.log("Using provided cards:", initialCards);
       
-      // Handle motorcycle data using existing format
-      if (route && route.includes('motor-cycle')) {
-        return {
-          id: item.id,
-          image: item.primary_image || item.image || "/assets/swiper/1.jpg",
-          title: item.title || "Unnamed Motorcycle",
-          description: item.brand && item.model 
-            ? `${item.brand} ${item.model} - ${item.year}`.trim() 
-            : item.description || "No details available",
-          price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
-          originalData: item
-        };
-      } else {
-        // Existing boat/default formatting - NO CHANGES
-        return {
-          id: item.id,
-          image: item.primary_image || (item.images && item.images.length > 0 ? item.images[0].image_url : null),
-          title: item.title || "Unnamed Item",
-          description: item.make && item.model 
-            ? `${item.make} ${item.model}`.trim() 
-            : item.location_name || "No details available",
-          price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
-          originalData: item
-        };
-      }
-    });
-    
-    setCards(formattedCards);
-    setLoading(false);
-    return;
-  }
-
+      const formattedCards = initialCards.map(item => {
+        if (item.image !== undefined && item.title && item.description && item.price) {
+          return item;
+        }
+        
+        // Handle property data using existing format
+        if (route && route.includes('property')) {
+          return {
+            id: item.id,
+            image: item.primary_image || item.image || "/assets/property/property.jpeg",
+            title: item.title || "Unnamed Property",
+            description: item.description || propertyService.formatPropertyDescription(item),
+            price: item.price ? `$${Number(item.price).toLocaleString()}` : "Price unavailable",
+            originalData: item
+          };
+        } else if (route && route.includes('motor-cycle')) {
+          // Existing motorcycle formatting
+          return {
+            id: item.id,
+            image: item.primary_image || item.image || "/assets/swiper/1.jpg",
+            title: item.title || "Unnamed Motorcycle",
+            description: item.brand && item.model 
+              ? `${item.brand} ${item.model} - ${item.year}`.trim() 
+              : item.description || "No details available",
+            price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
+            originalData: item
+          };
+        } else {
+          // Existing boat/default formatting - NO CHANGES
+          return {
+            id: item.id,
+            image: item.primary_image || (item.images && item.images.length > 0 ? item.images[0].image_url : null),
+            title: item.title || "Unnamed Item",
+            description: item.make && item.model 
+              ? `${item.make} ${item.model}`.trim() 
+              : item.location_name || "No details available",
+            price: item.price ? `$${item.price.toLocaleString()}` : "Price unavailable",
+            originalData: item
+          };
+        }
+      });
+      
+      setCards(formattedCards);
+      setLoading(false);
+      return;
+    }
 
     if (!disableAutoFetch) {
       const fetchCards = async () => {
@@ -88,13 +96,18 @@ const Page = ({
             setCards(formattedBoats);
             
           } else if (route && route.includes('motor-cycle')) {
-            // ONLY ADDITION: Motorcycle logic using existing UI components
+            // Existing motorcycle logic - NO CHANGES
             const motorcycles = await motorcycleService.getHomepageMotorcycles(10);
             
             const formattedMotorcycles = motorcycles.map(motorcycle => 
               motorcycleService.formatMotorcycleForDisplay(motorcycle)
             );
             setCards(formattedMotorcycles);
+            
+          } else if (route && route.includes('property')) {
+            // NEW: Property logic
+            const properties = await propertyService.getHomepageProperties(10);
+            setCards(properties); // Already formatted by service
             
           } else {
             // Existing default logic - NO CHANGES
@@ -119,7 +132,7 @@ const Page = ({
       image: `https://picsum.photos/300/200?random=${Math.floor(Math.random() * 1000)}`,
       title: `Product ${i + 1}`,
       description: "Lorem ipsum dolor sit amet",
-      price: `$${(Math.random() * 1000).toFixed(2)}`,
+      price: `${(Math.random() * 1000).toFixed(2)}`,
     }));
   };
 
