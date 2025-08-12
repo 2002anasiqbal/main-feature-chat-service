@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV - {{ cv_data.contact_info.email if cv_data.contact_info else 'Professional CV' }}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0891b2;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #0891b2;
+            margin-bottom: 10px;
+        }
+        .contact-info {
+            color: #666;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #0891b2;
+            border-bottom: 1px solid #0891b2;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        .experience-item, .education-item {
+            margin-bottom: 20px;
+        }
+        .item-header {
+            font-weight: bold;
+            color: #0891b2;
+        }
+        .item-subheader {
+            color: #666;
+            font-style: italic;
+        }
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .skill-item {
+            background: #e0f2fe;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        .languages-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if cv_data.contact_info %}
+        <h1>Professional CV</h1>
+        <div class="contact-info">
+            {% if cv_data.contact_info.email %}
+            <p>{{ cv_data.contact_info.email }}</p>
+            {% endif %}
+            {% if cv_data.contact_info.phone %}
+            <p>{{ cv_data.contact_info.phone }}</p>
+            {% endif %}
+            {% if cv_data.contact_info.location %}
+            <p>{{ cv_data.contact_info.location }}</p>
+            {% endif %}
+            {% if cv_data.contact_info.linkedin_url %}
+            <p>LinkedIn: {{ cv_data.contact_info.linkedin_url }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Professional Summary -->
+    {% if cv_data.summary and cv_data.summary.professional_summary %}
+    <div class="section">
+        <h2>Professional Summary</h2>
+        <p>{{ cv_data.summary.professional_summary }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Work Experience -->
+    {% if cv_data.work_experience and cv_data.work_experience.experiences %}
+    <div class="section">
+        <h2>Work Experience</h2>
+        {% for exp in cv_data.work_experience.experiences %}
+        <div class="experience-item">
+            <div class="item-header">{{ exp.job_title }}</div>
+            <div class="item-subheader">{{ exp.company_name }}{% if exp.location %}, {{ exp.location }}{% endif %}</div>
+            <div class="item-subheader">
+                {{ exp.start_date.strftime('%B %Y') if exp.start_date else '' }} - 
+                {% if exp.is_current %}Present{% else %}{{ exp.end_date.strftime('%B %Y') if exp.end_date else '' }}{% endif %}
+            </div>
+            {% if exp.description %}
+            <p>{{ exp.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Education -->
+    {% if cv_data.education and cv_data.education.educations %}
+    <div class="section">
+        <h2>Education</h2>
+        {% for edu in cv_data.education.educations %}
+        <div class="education-item">
+            <div class="item-header">{{ edu.degree }}{% if edu.field_of_study %} in {{ edu.field_of_study }}{% endif %}</div>
+            <div class="item-subheader">{{ edu.institution }}{% if edu.location %}, {{ edu.location }}{% endif %}</div>
+            <div class="item-subheader">
+                {{ edu.start_date.strftime('%B %Y') if edu.start_date else '' }} - 
+                {% if edu.is_current %}Present{% else %}{{ edu.end_date.strftime('%B %Y') if edu.end_date else '' }}{% endif %}
+            </div>
+            {% if edu.description %}
+            <p>{{ edu.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Languages -->
+    {% if cv_data.languages and cv_data.languages.languages %}
+    <div class="section">
+        <h2>Languages</h2>
+        <div class="languages-list">
+            {% for lang in cv_data.languages.languages %}
+            <div>
+                <strong>Language {{ loop.index }}</strong>: {{ lang.proficiency_level|title }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
+    
