@@ -141,7 +141,66 @@ services:
     networks:
       - selgo-network
     command: uvicorn src.app:app --host 0.0.0.0 --port 8004 --reload
+<<<<<<< HEAD
              
+=======
+
+  # Car Service (NEW)
+  car-service:
+    build:
+      context: ./car-service
+      dockerfile: Dockerfile
+    container_name: selgo-car-service
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./car-service:/app
+      - ./car-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_car
+      - API_HOST=0.0.0.0
+      - API_PORT=8005
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8005 --reload
+
+  # Square Service (NEW)
+  square-service:
+    build:
+      context: ./square-service
+      dockerfile: Dockerfile
+    container_name: selgo-square-service
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./square-service:/app
+      - ./square-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_square
+      - API_HOST=0.0.0.0
+      - API_PORT=8006
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8006 --reload
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
 
 
   # Redis (for caching)

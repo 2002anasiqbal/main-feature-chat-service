@@ -61,10 +61,17 @@ const Header = () => {
     { name: "Travel", icon: "airplane-take-off-01.svg", href: "/routes/travel" },
     { name: "Jobs", icon: "job-search.svg", href: "/routes/jobs" },
     { name: "Property", icon: "home-09.svg", href: "/routes/property" },
+<<<<<<< HEAD
     { name: "Motorcycles", icon: "motorbike-02.svg", href: "/routes/motor-cycle" },
     { name: "Boat", icon: "boat.svg", href: "/routes/boat" },
     { name: "Furniture", icon: "furniture.svg", href: "/routes/the-square" },
     { name: "Fridge", icon: "fridge.svg", href: "/routes/nu-electronics" },
+=======
+    { name: "Cars", icon: "car-02.svg", href: "/routes/cars" },
+    { name: "Motorcycles", icon: "motorbike-02.svg", href: "/routes/motor-cycle" },
+    { name: "Boat", icon: "boat.svg", href: "/routes/boat" },
+    { name: "Square", icon: "shape-square.svg", href: "/routes/square" },
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
     { name: "Agreements", icon: "agreement-02.svg", href: "/routes/my-tender" },
     { name: "Smart Devices", icon: "bot.svg", href: "/routes/nu-electronics" },
   ];

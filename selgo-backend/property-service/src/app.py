@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # property-service/src/app.py (Fixed for your folder structure)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,17 +18,48 @@ app = FastAPI(
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+=======
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
+import logging
+
+from .config.config import settings
+from .database.database import engine, Base
+from .api.routes import router as property_router
+from .models.models import *
+from .utils.auth import auth_client
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Selgo Property Service",
+    description="API for property listings and related operations",
+    version="0.1.0",
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
 )
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
+<<<<<<< HEAD
     allow_origins=["*"],  # In production, replace with specific origins
+=======
+    allow_origins=["*"],
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+<<<<<<< HEAD
 # Include routes
 app.include_router(router)  # Original routes (points 1-5)
 app.include_router(advanced_router)  # New routes (points 6-10)
@@ -321,3 +353,47 @@ async def debug_middleware(request, call_next):
     
 #     response = await call_next(request)
 #     return response
+=======
+# Create upload directory if it doesn't exist
+os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+
+# Mount static files directory for uploads
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_FOLDER), name="uploads")
+
+# Include routers
+app.include_router(property_router)
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "property", "version": "0.1.0"}
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {
+        "service": "property",
+        "version": "0.1.0",
+        "description": "API for property listings and related operations",
+        "documentation": "/docs",
+    }
+
+# Create tables on startup (for development)
+@app.on_event("startup")
+async def startup_event():
+    try:
+        # Create tables if they don't exist
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+
+# Add shutdown event to close auth client
+@app.on_event("shutdown")
+async def shutdown_event():
+    try:
+        await auth_client.close()
+        logger.info("Auth client closed successfully")
+    except Exception as e:
+        logger.error(f"Error closing auth client: {e}")
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)

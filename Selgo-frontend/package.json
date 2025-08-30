@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+<<<<<<< HEAD
     "dev": "next dev --turbopack",
+=======
+    "dev": "next dev",
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
