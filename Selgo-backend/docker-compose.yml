@@ -1,0 +1,249 @@
+﻿# selgo-backend/docker-compose.yml (Updated)
+version: '3.8'
+
+services:
+  # Auth Service
+  auth-service:
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: selgo-auth-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./auth-service:/app
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_auth
+      - API_HOST=0.0.0.0
+      - API_PORT=8001
+      - ENVIRONMENT=development
+      - SECRET_KEY=your-super-secret-key-change-this
+    depends_on:
+      - postgres
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8001 --reload
+
+  # Boat Service
+  boat-service:
+    build: 
+      context: ./boat-service
+      dockerfile: Dockerfile
+    container_name: selgo-boat-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./boat-service:/app
+      - ./boat-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_boat
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+
+  # Job Service
+  job-service:
+    build: 
+      context: ./job-service
+      dockerfile: Dockerfile
+    container_name: selgo-job-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./job-service:/app
+      - ./job-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_job
+      - API_HOST=0.0.0.0
+      - API_PORT=8002
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - auth-service
+      - redis
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8002 --reload
+
+  # Motorcycle Service (NEW)
+  motorcycle-service:
+    build: 
+      context: ./motorcycle-service
+      dockerfile: Dockerfile
+    container_name: selgo-motorcycle-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./motorcycle-service:/app
+      - ./motorcycle-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_motorcycle
+      - API_HOST=0.0.0.0
+      - API_PORT=8003
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8003 --reload
+
+  # Property Service (NEW)
+  property-service:
+    build: 
+      context: ./property-service
+      dockerfile: Dockerfile
+    container_name: selgo-property-service
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./property-service:/app
+      - ./property-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_property
+      - API_HOST=0.0.0.0
+      - API_PORT=8004
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8004 --reload
+<<<<<<< HEAD
+             
+=======
+
+  # Car Service (NEW)
+  car-service:
+    build:
+      context: ./car-service
+      dockerfile: Dockerfile
+    container_name: selgo-car-service
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./car-service:/app
+      - ./car-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_car
+      - API_HOST=0.0.0.0
+      - API_PORT=8005
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8005 --reload
+
+  # Square Service (NEW)
+  square-service:
+    build:
+      context: ./square-service
+      dockerfile: Dockerfile
+    container_name: selgo-square-service
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./square-service:/app
+      - ./square-service/uploads:/app/uploads
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=12345
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=selgo_square
+      - API_HOST=0.0.0.0
+      - API_PORT=8006
+      - ENVIRONMENT=development
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - auth-service
+    networks:
+      - selgo-network
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8006 --reload
+>>>>>>> ef864b3 (Replace Features branch with selgo-feature contents)
+
+
+  # Redis (for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: selgo-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - selgo-network
+
+  # PostgreSQL (Updated for multiple databases)
+  postgres:
+    image: postgis/postgis:14-3.2
+    container_name: selgo-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - selgo-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: selgo-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@selgo.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - selgo-network
+
+networks:
+  selgo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
