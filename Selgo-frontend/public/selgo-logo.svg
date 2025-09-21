@@ -1,0 +1,23 @@
+<svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- SELGO Text -->
+  <g transform="translate(20, 20)">
+    <!-- S -->
+    <text x="0" y="60" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FF8C42">S</text>
+    
+    <!-- E -->
+    <text x="60" y="60" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FF8C42">E</text>
+    
+    <!-- L -->
+    <text x="120" y="60" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FF8C42">L</text>
+    
+    <!-- G -->
+    <text x="170" y="60" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FF8C42">G</text>
+    
+    <!-- O (Green circle with white center) -->
+    <g transform="translate(240, 40)">
+      <circle cx="0" cy="0" r="30" fill="#4CAF50" stroke="none"/>
+      <circle cx="0" cy="0" r="18" fill="#FFFFFF" stroke="none"/>
+      <circle cx="0" cy="0" r="8" fill="#4CAF50" stroke="none"/>
+    </g>
+  </g>
+</svg>

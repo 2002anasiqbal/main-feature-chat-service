@@ -1,0 +1,119 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Frontend - Next.js dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Frontend - Next.js specific
+Selgo-frontend/node_modules/
+Selgo-frontend/.next/
+Selgo-frontend/out/
+Selgo-frontend/build/
+Selgo-frontend/.vercel
+Selgo-frontend/*.tsbuildinfo
+Selgo-frontend/next-env.d.ts
+
+# Testing
+/coverage
+Selgo-frontend/coverage/
+
+# Python Virtual Environments (Backend)
+selgo-backend/auth-service/venv_auth/
+selgo-backend/boat-service/venv/
+selgo-backend/job-service/venv_job/
+selgo-backend/motorcycle-service/env_mc/
+selgo-backend/venv/
+selgo-backend/env/
+selgo-backend/ENV/
+selgo-backend/.venv/
+selgo-backend/.env/
+venv/
+env/
+ENV/
+.venv/
+.env/
+venv_*/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# FastAPI specific
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+
+# Additional safety patterns
+*.log
+logs/
+
+# Uploads - exclude all files but keep directory structure
+uploads/*
+!uploads/.gitkeep
+selgo-backend/*/uploads/*
+!selgo-backend/*/uploads/.gitkeep
+**/uploads/*.jpeg
+**/uploads/*.jpg
+**/uploads/*.png
+**/uploads/*.gif
+**/uploads/*.pdf
+
+# Alembic migrations (database)
+selgo-backend/*/alembic/versions/*.pyc
